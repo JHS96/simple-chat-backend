@@ -8,6 +8,15 @@ exports.signup = async (req, res, next) => {
 	const password = req.body.password;
 
 	try {
+		// If user with this email address already exists in database, abort new user creation.
+		const existingUser = await User.findOne({ email: email });
+		if (existingUser) {
+			const error = new Error(
+				'Please use another email address.'
+			);
+			error.statusCode = 422;
+			return next(error);
+		}
 		const hashedPassword = await bcrypt.hash(password, 12);
 		const newUser = new User({
 			name: name,
