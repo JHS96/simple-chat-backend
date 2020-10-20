@@ -1,3 +1,6 @@
 exports.getMessages = (req, res, next) => {
-	res.status(200).json({ message: 'You reached me bruh!' });
+	const contactId = req.params.contactId;
+	res
+		.status(200)
+		.json({ message: 'Here is the conversation between you and ' + contactId });
 };

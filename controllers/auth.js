@@ -12,7 +12,7 @@ exports.signup = async (req, res, next) => {
 		const existingUser = await User.findOne({ email: email });
 		if (existingUser) {
 			const error = new Error(
-				'Please use another email address.'
+				'Email address already taken. Please use another email address.'
 			);
 			error.statusCode = 422;
 			return next(error);

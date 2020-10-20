@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 
 const authRoutes = require('./routes/auth');
+const contactRoutes = require('./routes/contact');
 const messageRoutes = require('./routes/messages');
 
 require('dotenv').config();
@@ -12,6 +13,7 @@ const app = express();
 app.use(bodyParser.json());
 
 app.use('/auth', authRoutes);
+app.use('/contact', contactRoutes);
 app.use('/messages', messageRoutes);
 
 // Error handling middleware
