@@ -14,6 +14,8 @@ const userSchema = new Schema({
 		type: String,
 		required: true
 	},
+	receivedRequests: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+	sentRequests: [{ type: Schema.Types.ObjectId, ref: 'User' }],
 	contacts: [{ type: Schema.Types.ObjectId, ref: 'User' }]
 });
 
