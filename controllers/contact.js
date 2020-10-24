@@ -1,18 +1,19 @@
 const User = require('../models/user');
+const Conversation = require('../models/conversation');
 
 exports.requestContact = async (req, res, next) => {
 	const requestSenderId = req.body.requestSenderId;
 	const requestReceiverId = req.body.requestReceiverId;
 	try {
-		const reqSender = await User.findById(requestSenderId);
+		const reqSender = await User.findById(requestSenderId).populate('conversations');
 		if (!reqSender) {
 			const error = new Error('Could not find request sender.');
 			error.statusCode = 404;
 			return next(error);
 		}
-		// If request sender already has this person in thier contacts array, throw error.
-		const existingContact = reqSender.contacts.findIndex(
-			c => c._id.toString() === requestReceiverId
+		// If request sender already has this person in their conversations array, throw error.
+		const existingContact = reqSender.conversations.findIndex(
+			conversation => conversation.contactId === requestReceiverId
 		);
 		if (existingContact >= 0) {
 			const error = new Error('Contact already exists.');
@@ -58,32 +59,58 @@ exports.addNewContact = async (req, res, next) => {
 	const requestSenderId = req.body.requestSenderId;
 	try {
 		// If user to which contact should be added could not be found, throw error.
-		const user = await User.findById(userId);
+		const user = await User.findById(userId).populate('conversations');
 		if (!user) {
 			const error = new Error('Uanable to find user to add this contact to.');
 			error.statusCode = 404;
 			return next(error);
 		}
 		// If request sender could not be found, throw error.
-		const requestSender = await User.findById(requestSenderId);
+		const requestSender = await User.findById(requestSenderId).populate('conversations');
 		if (!requestSender) {
 			const error = new Error('New contact details could not be found.');
 			error.statusCode = 404;
 			return next(error);
 		}
+		// If request sender or receiver already has this contact in their conversations array, throw error.
+		const senderHasContact = requestSender.conversations.findIndex(
+			c => c.contactId === userId
+		);
+		const userHasContact = user.conversations.findIndex(
+			c => c.contactId === requestSenderId
+		);
+		if (senderHasContact >= 0 || userHasContact >= 0) {
+			const error = new Error('Contact already exists.');
+			error.statusCode = 409;
+			return next(error);
+		}
 		// Add request sender to user's contacts array and remove from user's receivedRequests array
-		user.contacts.push(requestSender);
+		// also, create a Conversation Copy for sender and add to sender's conversations array
 		const updatedReceivedRequests = user.receivedRequests.filter(
 			r => r._id.toString() !== requestSenderId
 		);
 		user.receivedRequests = updatedReceivedRequests;
+		const sendersConversationCopy = new Conversation({
+			contactName: requestSender.name,
+			contactId: requestSenderId,
+			thread: []
+		});
+		const senConCopy = await sendersConversationCopy.save();
+		user.conversations.push(senConCopy);
 		await user.save();
 		// Add user to the contacts array of the contact request sender and remove from sentRequests array
-		requestSender.contacts.push(user);
+		// also, create a Conversation Copy for user and add to user's conversations array
 		const updatedSentRequests = requestSender.sentRequests.filter(
 			r => r._id.toString() !== userId
 		);
 		requestSender.sentRequests = updatedSentRequests;
+		const usersConversationCopy = new Conversation({
+			contactName: user.name,
+			contactId: userId,
+			thread: []
+		});
+		const userConCopy = await usersConversationCopy.save();
+		requestSender.conversations.push(userConCopy);
 		await requestSender.save();
 		res.status(201).json({ message: 'Contact added.' });
 	} catch (err) {

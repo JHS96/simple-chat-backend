@@ -16,7 +16,13 @@ const userSchema = new Schema({
 	},
 	receivedRequests: [{ type: Schema.Types.ObjectId, ref: 'User' }],
 	sentRequests: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-	contacts: [{ type: Schema.Types.ObjectId, ref: 'User' }]
+	conversations: [
+		{
+			type: Schema.Types.ObjectId,
+			ref: 'Conversation',
+			required: true
+		}
+	]
 });
 
 module.exports = mongoose.model('User', userSchema);
