@@ -10,6 +10,10 @@ const conversationSchema = new Schema({
 		type: String,
 		required: true
 	},
+	contactsConversationId: {
+		type: String,
+		required: true
+	},
 	thread: [
 		{
 			type: Schema.Types.ObjectId,

@@ -5,7 +5,9 @@ exports.requestContact = async (req, res, next) => {
 	const requestSenderId = req.body.requestSenderId;
 	const requestReceiverId = req.body.requestReceiverId;
 	try {
-		const reqSender = await User.findById(requestSenderId).populate('conversations');
+		const reqSender = await User.findById(requestSenderId).populate(
+			'conversations'
+		);
 		if (!reqSender) {
 			const error = new Error('Could not find request sender.');
 			error.statusCode = 404;
@@ -66,7 +68,9 @@ exports.addNewContact = async (req, res, next) => {
 			return next(error);
 		}
 		// If request sender could not be found, throw error.
-		const requestSender = await User.findById(requestSenderId).populate('conversations');
+		const requestSender = await User.findById(requestSenderId).populate(
+			'conversations'
+		);
 		if (!requestSender) {
 			const error = new Error('New contact details could not be found.');
 			error.statusCode = 404;
@@ -84,34 +88,41 @@ exports.addNewContact = async (req, res, next) => {
 			error.statusCode = 409;
 			return next(error);
 		}
-		// Add request sender to user's contacts array and remove from user's receivedRequests array
-		// also, create a Conversation Copy for sender and add to sender's conversations array
+		// Add request sender to user's conversations array and remove from user's receivedRequests array
+		// also, create a Conversation Copy for user and add to user's conversations array
 		const updatedReceivedRequests = user.receivedRequests.filter(
 			r => r._id.toString() !== requestSenderId
 		);
 		user.receivedRequests = updatedReceivedRequests;
-		const sendersConversationCopy = new Conversation({
+		const usersConversationCopy = new Conversation({
 			contactName: requestSender.name,
 			contactId: requestSenderId,
+			contactsConversationId: "<Reference to sender's copy of conversation>",
 			thread: []
 		});
-		const senConCopy = await sendersConversationCopy.save();
-		user.conversations.push(senConCopy);
+		const userConCopy = await usersConversationCopy.save();
+		user.conversations.push(userConCopy);
 		await user.save();
-		// Add user to the contacts array of the contact request sender and remove from sentRequests array
-		// also, create a Conversation Copy for user and add to user's conversations array
+		// Add user to the conversations array of the contact request sender and remove from sentRequests array
+		// also, create a Conversation Copy for sender and add to sender's conversations array
 		const updatedSentRequests = requestSender.sentRequests.filter(
 			r => r._id.toString() !== userId
 		);
 		requestSender.sentRequests = updatedSentRequests;
-		const usersConversationCopy = new Conversation({
+		const sendersConversationCopy = new Conversation({
 			contactName: user.name,
 			contactId: userId,
+			contactsConversationId: "<Reference to receiver's copy of conversation>",
 			thread: []
 		});
-		const userConCopy = await usersConversationCopy.save();
-		requestSender.conversations.push(userConCopy);
+		const senConCopy = await sendersConversationCopy.save();
+		requestSender.conversations.push(senConCopy);
 		await requestSender.save();
+		// Re-save both conversation copies, this time referencing each other
+		userConCopy.contactsConversationId = senConCopy._id.toString();
+		await userConCopy.save();
+		senConCopy.contactsConversationId = userConCopy._id.toString();
+		await senConCopy.save();
 		res.status(201).json({ message: 'Contact added.' });
 	} catch (err) {
 		if (!err.statusCode) {

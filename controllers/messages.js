@@ -4,6 +4,7 @@ const Message = require('../models/message');
 exports.sendMessage = async (req, res, next) => {
 	const receiverId = req.body.receiverId;
 	const senderId = req.body.msgSenderId;
+	const senderName = req.body.senderName;
 	const conversationId = req.body.conversationId;
 	const msgBody = req.body.msgBody;
 	try {
