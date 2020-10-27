@@ -11,8 +11,8 @@ exports.sendMessage = async (req, res, next) => {
 		const sender = await User.findById(req.body.userId); // TODO Change to req.userId when is-auth.js is implemented
 		const receiverMsgCopy = new Message({
 			senderName: sender.name,
-			senderId: senderConversationId,
-			receiverId: receiverConversationId,
+			senderConversationId: senderConversationId,
+			receiverConversationId: receiverConversationId,
 			message: msgBody,
 			isSender: false
 		});
@@ -31,8 +31,8 @@ exports.sendMessage = async (req, res, next) => {
 		// Create message copy for sender
 		const senderMsgCopy = new Message({
 			senderName: 'Me',
-			senderId: senderConversationId,
-			receiverId: receiverConversationId,
+			senderConversationId: senderConversationId,
+			receiverConversationId: receiverConversationId,
 			receiversMsgCopyId: receiveResult._id.toString(),
 			message: msgBody
 		});
@@ -57,9 +57,33 @@ exports.sendMessage = async (req, res, next) => {
 	}
 };
 
-exports.getMessages = (req, res, next) => {
-	const contactId = req.params.contactId;
-	res
-		.status(200)
-		.json({ message: 'Here is the conversation between you and ' + contactId });
+exports.getConversation = async (req, res, next) => {
+	const conversationId = req.params.conversationId;
+	try {
+		// Find conversation by id.
+		const conversation = await Conversation.findById(conversationId).populate(
+			'thread'
+		);
+		if (!conversation) {
+			const error = new Error('Conversation not found.');
+			error.statusCode = 404;
+			return next(error);
+		}
+		// // If the requesting user's userId doesn't match the conversationOwner throw error.
+		// if (req.userId !== conversation.conversationOwner.toString()) { // TODO uncomment when is-auth is implemented
+		// 	const error = new Error(
+		// 		'You are not authorized to view this conversation.'
+		// 	);
+		// 	error.statusCode = 401;
+		// 	return next(error);
+		// }
+		res
+			.status(200)
+			.json({ message: 'Conversation found.', data: conversation });
+	} catch (err) {
+		if (!err.statusCode) {
+			err.statusCode = 500;
+		}
+		return next(err);
+	}
 };

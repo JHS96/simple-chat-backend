@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const conversationSchema = new Schema({
+	conversationOwner: {
+		type: Schema.Types.ObjectId,
+		ref: 'User',
+		required: true
+	},
 	contactName: {
 		type: String,
 		required: true

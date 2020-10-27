@@ -7,17 +7,18 @@ const messageSchema = new Schema(
 			type: String,
 			required: true
 		},
-		senderId: {
+		senderConversationId: {
 			type: String,
 			required: true
 		},
-		receiverId: {
+		receiverConversationId: {
 			type: String,
 			required: true
 		},
 		receiversMsgCopyId: {
 			type: String,
-			default: "Same as _id of this message - This message object IS the receiver's copy.",
+			default:
+				"Same as _id of this message - This message object IS the receiver's copy.",
 			required: true
 		},
 		message: {

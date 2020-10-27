@@ -95,6 +95,7 @@ exports.addNewContact = async (req, res, next) => {
 		);
 		user.receivedRequests = updatedReceivedRequests;
 		const usersConversationCopy = new Conversation({
+			conversationOwner: user,
 			contactName: requestSender.name,
 			contactId: requestSenderId,
 			contactsConversationId: "<Reference to sender's copy of conversation>",
@@ -110,6 +111,7 @@ exports.addNewContact = async (req, res, next) => {
 		);
 		requestSender.sentRequests = updatedSentRequests;
 		const sendersConversationCopy = new Conversation({
+			conversationOwner: requestSender,
 			contactName: user.name,
 			contactId: userId,
 			contactsConversationId: userConCopy._id.toString(),
