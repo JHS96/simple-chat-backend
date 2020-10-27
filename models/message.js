@@ -15,8 +15,18 @@ const messageSchema = new Schema(
 			type: String,
 			required: true
 		},
-		messgage: {
+		receiversMsgCopyId: {
 			type: String,
+			default: "Same as _id of this message - This message object IS the receiver's copy.",
+			required: true
+		},
+		message: {
+			type: String,
+			required: true
+		},
+		isSender: {
+			type: Boolean,
+			default: true,
 			required: true
 		}
 	},

@@ -112,17 +112,15 @@ exports.addNewContact = async (req, res, next) => {
 		const sendersConversationCopy = new Conversation({
 			contactName: user.name,
 			contactId: userId,
-			contactsConversationId: "<Reference to receiver's copy of conversation>",
+			contactsConversationId: userConCopy._id.toString(),
 			thread: []
 		});
 		const senConCopy = await sendersConversationCopy.save();
 		requestSender.conversations.push(senConCopy);
 		await requestSender.save();
-		// Re-save both conversation copies, this time referencing each other
+		// Re-save user's conversation copy, this time referencing sender's (newly created) conversation copy
 		userConCopy.contactsConversationId = senConCopy._id.toString();
 		await userConCopy.save();
-		senConCopy.contactsConversationId = userConCopy._id.toString();
-		await senConCopy.save();
 		res.status(201).json({ message: 'Contact added.' });
 	} catch (err) {
 		if (!err.statusCode) {

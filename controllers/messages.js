@@ -1,33 +1,54 @@
 const User = require('../models/user');
+const Conversation = require('../models/conversation');
 const Message = require('../models/message');
 
 exports.sendMessage = async (req, res, next) => {
-	const receiverId = req.body.receiverId;
-	const senderId = req.body.msgSenderId;
-	const senderName = req.body.senderName;
-	const conversationId = req.body.conversationId;
+	const senderConversationId = req.body.senderConversationId;
+	const receiverConversationId = req.body.receiverConversationId;
 	const msgBody = req.body.msgBody;
 	try {
-		// Find receiver in database and add message to conversation with this sender
-		const receiver = await User.findById(receiverId);
-		if (!receiver) {
+		// Get name of the message sender & Create message copy for receiver
+		const sender = await User.findById(req.body.userId); // TODO Change to req.userId when is-auth.js is implemented
+		const receiverMsgCopy = new Message({
+			senderName: sender.name,
+			senderId: senderConversationId,
+			receiverId: receiverConversationId,
+			message: msgBody,
+			isSender: false
+		});
+		const receiveResult = await receiverMsgCopy.save();
+		// Find receiver's copy of conversation and add message to thread array
+		const receiverCon = await Conversation.findById(receiverConversationId);
+		if (!receiverCon) {
 			const error = new Error(
-				'The intented receiver for this message could not be found.'
+				'Message not delivered. The intended recipient of this message does not appear to have an established conversation with you.'
 			);
 			error.statusCode = 404;
 			return next(error);
 		}
-		const receiverThread = receiver.contacts.filter(
-			c => c._id.toString() === conversationId
-		);
-		// console.log(receiver.contacts);
-		// const newMsg = new Message({ msgSenderName: 'Jou Ma', message: 'Ligma Balls!' });
-		// receiverThread.conversation.push(newMsg);
-		// await receiver.save();
-
-		// const con = receiver.populate('contacts[0].contactDetails');
-		res.status(200).json({ data: receiver.contacts[0].conversation });
-		// Find sender in database and add message to conversation with this receiver
+		receiverCon.thread.push(receiveResult);
+		await receiverCon.save();
+		// Create message copy for sender
+		const senderMsgCopy = new Message({
+			senderName: 'Me',
+			senderId: senderConversationId,
+			receiverId: receiverConversationId,
+			receiversMsgCopyId: receiveResult._id.toString(),
+			message: msgBody
+		});
+		const sendResult = await senderMsgCopy.save();
+		// Find sender's copy of conversation and add message to thread array
+		const senderCon = await Conversation.findById(senderConversationId);
+		if (!senderCon) {
+			const error = new Error(
+				'Message not delivered. You do not appear to have an established conversation with the intended recipient of this message.'
+			);
+			error.statusCode = 404;
+			return next(error);
+		}
+		senderCon.thread.push(sendResult);
+		await senderCon.save();
+		res.status(200).json({ message: 'Message sent.' });
 	} catch (err) {
 		if (!err.statusCode) {
 			err.statusCode = 500;
