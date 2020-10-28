@@ -2,7 +2,7 @@ const User = require('../models/user');
 const Conversation = require('../models/conversation');
 
 exports.requestContact = async (req, res, next) => {
-	const requestSenderId = req.body.requestSenderId;
+	const requestSenderId = req.userId;
 	const requestReceiverId = req.body.requestReceiverId;
 	try {
 		const reqSender = await User.findById(requestSenderId).populate(
@@ -57,7 +57,7 @@ exports.requestContact = async (req, res, next) => {
 };
 
 exports.addNewContact = async (req, res, next) => {
-	const userId = req.body.userId;
+	const userId = req.userId;
 	const requestSenderId = req.body.requestSenderId;
 	try {
 		// If user to which contact should be added could not be found, throw error.

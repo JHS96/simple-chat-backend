@@ -8,7 +8,7 @@ exports.sendMessage = async (req, res, next) => {
 	const msgBody = req.body.msgBody;
 	try {
 		// Get name of the message sender & Create message copy for receiver
-		const sender = await User.findById(req.body.userId); // TODO Change to req.userId when is-auth.js is implemented
+		const sender = await User.findById(req.userId);
 		const receiverMsgCopy = new Message({
 			senderName: sender.name,
 			senderConversationId: senderConversationId,
@@ -69,14 +69,14 @@ exports.getConversation = async (req, res, next) => {
 			error.statusCode = 404;
 			return next(error);
 		}
-		// // If the requesting user's userId doesn't match the conversationOwner throw error.
-		// if (req.userId !== conversation.conversationOwner.toString()) { // TODO uncomment when is-auth is implemented
-		// 	const error = new Error(
-		// 		'You are not authorized to view this conversation.'
-		// 	);
-		// 	error.statusCode = 401;
-		// 	return next(error);
-		// }
+		// If the requesting user's userId doesn't match the conversationOwner throw error.
+		if (req.userId !== conversation.conversationOwner.toString()) {
+			const error = new Error(
+				'You are not authorized to view this conversation.'
+			);
+			error.statusCode = 401;
+			return next(error);
+		}
 		res
 			.status(200)
 			.json({ message: 'Conversation found.', data: conversation });
