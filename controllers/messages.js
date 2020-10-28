@@ -57,6 +57,25 @@ exports.sendMessage = async (req, res, next) => {
 	}
 };
 
+exports.getAllConversations = async (req, res, next) => {
+	const userId = req.userId;
+	try {
+		// Find requesting user by id extracted from token in /middleware/is-auth.js
+		const user = await User.findById(userId).populate('conversations');
+		if (!user) {
+			const error = new Error('User not found.');
+			error.statusCode = 404;
+			return next(error);
+		}
+		res.status(200).json({ data: user.conversations });
+	} catch (err) {
+		if (!err.statusCode) {
+			err.statusCode = 500;
+		}
+		return next(err);
+	}
+};
+
 exports.getConversation = async (req, res, next) => {
 	const conversationId = req.params.conversationId;
 	try {

@@ -6,6 +6,12 @@ const isAuth = require('../middleware/is-auth');
 const router = express.Router();
 
 router.get(
+	'/get-all-conversations',
+	isAuth,
+	messagesController.getAllConversations
+);
+
+router.get(
 	'/get-conversation/:conversationId',
 	isAuth,
 	messagesController.getConversation
