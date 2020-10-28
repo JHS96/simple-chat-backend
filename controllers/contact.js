@@ -131,3 +131,57 @@ exports.addNewContact = async (req, res, next) => {
 		next(err);
 	}
 };
+
+exports.getSentRequests = async (req, res, next) => {
+	const userId = req.userId;
+	try {
+		// Find user and return info on items in sentRequests array.
+		const user = await User.findById(userId).populate('sentRequests');
+		if (!user) {
+			const error = new Error('User not found.');
+			error.statusCode = 404;
+			return next(error);
+		}
+		const data = [];
+		user.sentRequests.forEach(sentReq => {
+			data.push({
+				id: sentReq._id.toString(),
+				name: sentReq.name,
+				email: sentReq.email
+			});
+		});
+		res.status(200).json({ data: data });
+	} catch (err) {
+		if (!err.statusCode) {
+			err.statusCode = 500;
+		}
+		return next(err);
+	}
+};
+
+exports.getReceivedRequests = async (req, res, next) => {
+	const userId = req.userId;
+	try {
+		// Find user and return info on items in sentRequests array.
+		const user = await User.findById(userId).populate('receivedRequests');
+		if (!user) {
+			const error = new Error('User not found.');
+			error.statusCode = 404;
+			return next(error);
+		}
+		const data = [];
+		user.receivedRequests.forEach(recReq => {
+			data.push({
+				id: recReq._id.toString(),
+				name: recReq.name,
+				email: recReq.email
+			});
+		});
+		res.status(200).json({ data: data });
+	} catch (err) {
+		if (!err.statusCode) {
+			err.statusCode = 500;
+		}
+		return next(err);
+	}
+};
