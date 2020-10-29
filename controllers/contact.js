@@ -1,6 +1,31 @@
 const User = require('../models/user');
 const Conversation = require('../models/conversation');
 
+exports.searchUsers = async (req, res, next) => {
+	const searchTerm = req.body.searchTerm;
+	try {
+		// Look for searchTerm matches using a regular expression
+		const result = await User.find({ name: new RegExp(searchTerm, 'i') });
+		if (!result) {
+			// If no results are found, return empty array
+			return res.status(404).json({ data: [] });
+		}
+		// Construct and return an array full of objects containig relevant info on search results
+		const data = [];
+		result.forEach(rslt => {
+			if (rslt._id.toString() !== req.userId) {
+				data.push({ name: rslt.name, id: rslt._id });
+			}
+		});
+		res.status(200).json({ data: data });
+	} catch (err) {
+		if (!err.statusCode) {
+			err.statusCode = 500;
+		}
+		return next(err);
+	}
+};
+
 exports.requestContact = async (req, res, next) => {
 	const requestSenderId = req.userId;
 	const requestReceiverId = req.body.requestReceiverId;

@@ -5,6 +5,8 @@ const isAuth = require('../middleware/is-auth');
 
 const router = express.Router();
 
+router.post('/search-users', isAuth, contactController.searchUsers);
+
 router.get('/sent-requests', isAuth, contactController.getSentRequests);
 
 router.get('/received-requests', isAuth, contactController.getReceivedRequests);
