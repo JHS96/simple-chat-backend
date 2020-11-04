@@ -24,3 +24,4 @@ yarn-error.log*
 
 .env
 nodemon.json
+aws-s3.js

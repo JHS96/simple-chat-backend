@@ -1,5 +1,8 @@
+require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const AWS = require('aws-sdk');
+const fs = require('fs');
 
 const User = require('../models/user');
 
@@ -7,6 +10,23 @@ exports.signup = async (req, res, next) => {
 	const name = req.body.name;
 	const email = req.body.email;
 	const password = req.body.password;
+
+	const saveUser = async user => {
+		const result = await user.save();
+		// Generate signed token.
+		const token = jwt.sign(
+			{ email: result.email, userId: result._id.toString() },
+			process.env.JWT_SECRET,
+			{ expiresIn: '12h' }
+		);
+		// Send back userId and auth token.
+		res.status(201).json({
+			message: 'User created successfully.',
+			userId: result._id,
+			token: token
+		});
+	};
+
 	try {
 		// If user with this email address already exists in database, abort new user creation.
 		const existingUser = await User.findOne({ email: email });
@@ -18,24 +38,50 @@ exports.signup = async (req, res, next) => {
 			return next(error);
 		}
 		const hashedPassword = await bcrypt.hash(password, 12);
-		const newUser = new User({
-			name: name,
-			email: email,
-			password: hashedPassword
-		});
-		const result = await newUser.save();
-		// Generate signed token.
-		const token = jwt.sign(
-			{ email: result.email, userId: result._id.toString() },
-			process.env.JWT_SECRET,
-			{ expiresIn: '1h' }
-		);
-		// Send back userId and auth token.
-		res.status(201).json({
-			message: 'User created successfully.',
-			userId: result._id,
-			token: token
-		});
+
+		// If the user chose an avatar image to upload, save it to aws-s3,
+		// otherwise use the default avatar image referenced in the User model.
+		if (req.file) {
+			AWS.config.setPromisesDependency();
+			AWS.config.update({
+				accessKeyId: process.env.AWS_IAM_USER_KEY,
+				secretAccessKey: process.env.AWS_IAM_USER_SECRET,
+				region: process.env.AWS_REGION
+			});
+
+			const s3 = new AWS.S3();
+			var params = {
+				ACL: 'public-read',
+				Bucket: process.env.AWS_BUCKET_NAME,
+				Body: fs.createReadStream(req.file.path),
+				Key: `userAvatar/${new Date().toISOString()}-${req.file.originalname}`
+			};
+
+			s3.upload(params, async (err, data) => {
+				if (err) {
+					console.log('Error occured while trying to upload to S3 bucket', err);
+				}
+				if (data) {
+					fs.unlinkSync(req.file.path); // Empty temp folder
+					const avatarUrl = data.Location;
+					const newUser = new User({
+						name: name,
+						email: email,
+						password: hashedPassword,
+						avatarUrl: avatarUrl
+					});
+					saveUser(newUser);
+				}
+			});
+		} else {
+			// New user created this way will have default avatar image - See User model
+			const newUser = new User({
+				name: name,
+				email: email,
+				password: hashedPassword
+			});
+			saveUser(newUser);
+		}
 	} catch (err) {
 		if (!err.statusCode) {
 			err.statusCode = 500;
