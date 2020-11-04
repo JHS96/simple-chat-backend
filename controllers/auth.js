@@ -50,7 +50,7 @@ exports.signup = async (req, res, next) => {
 			});
 
 			const s3 = new AWS.S3();
-			var params = {
+			const params = {
 				ACL: 'public-read',
 				Bucket: process.env.AWS_BUCKET_NAME,
 				Body: fs.createReadStream(req.file.path),

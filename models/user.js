@@ -1,3 +1,4 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
@@ -17,7 +18,7 @@ const userSchema = new Schema({
 	avatarUrl: {
 		type: String,
 		required: true,
-		default: 'https://simple-chat-avatars.s3.amazonaws.com/default-avatar.png'
+		default: process.env.AWS_DEFAULT_AVATAR_URL
 	},
 	userIsOnline: {
 		type: Boolean,

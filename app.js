@@ -5,6 +5,7 @@ const bodyParser = require('body-parser');
 const authRoutes = require('./routes/auth');
 const contactRoutes = require('./routes/contact');
 const messageRoutes = require('./routes/messages');
+const avatarRoutes = require('./routes/avatar');
 
 require('dotenv').config();
 
@@ -15,6 +16,7 @@ app.use(bodyParser.json());
 app.use('/auth', authRoutes);
 app.use('/contact', contactRoutes);
 app.use('/messages', messageRoutes);
+app.use('/avatar', avatarRoutes);
 
 // Error handling middleware
 app.use((error, req, res, next) => {
