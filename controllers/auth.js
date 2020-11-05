@@ -42,7 +42,6 @@ exports.signup = async (req, res, next) => {
 		// If the user chose an avatar image to upload, save it to aws-s3,
 		// otherwise use the default avatar image referenced in the User model.
 		if (req.file) {
-			AWS.config.setPromisesDependency();
 			AWS.config.update({
 				accessKeyId: process.env.AWS_IAM_USER_KEY,
 				secretAccessKey: process.env.AWS_IAM_USER_SECRET,
