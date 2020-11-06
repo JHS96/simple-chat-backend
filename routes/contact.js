@@ -9,7 +9,17 @@ router.post('/search-users', isAuth, contactController.searchUsers);
 
 router.get('/sent-requests', isAuth, contactController.getSentRequests);
 
-router.delete('/delete-sent-request', isAuth, contactController.deleteSentRequest);
+router.delete(
+	'/delete-sent-request',
+	isAuth,
+	contactController.deleteSentRequest
+);
+
+router.delete(
+	'/delete-received-request',
+	isAuth,
+	contactController.deleteReceivedRequest
+);
 
 router.get('/received-requests', isAuth, contactController.getReceivedRequests);
 
