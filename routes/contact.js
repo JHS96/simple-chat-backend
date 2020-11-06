@@ -9,6 +9,8 @@ router.post('/search-users', isAuth, contactController.searchUsers);
 
 router.get('/sent-requests', isAuth, contactController.getSentRequests);
 
+router.delete('/delete-sent-request', isAuth, contactController.deleteSentRequest);
+
 router.get('/received-requests', isAuth, contactController.getReceivedRequests);
 
 router.post('/request-contact', isAuth, contactController.requestContact);

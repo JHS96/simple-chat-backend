@@ -81,6 +81,47 @@ exports.requestContact = async (req, res, next) => {
 	}
 };
 
+exports.deleteSentRequest = async (req, res, next) => {
+	const userId = req.userId;
+	const requestReceiverId = req.body.requestReceiverId;
+	try {
+		// Find user in database.
+		const user = await User.findById(userId);
+		if (!user) {
+			const error = new Error('User not found.');
+			error.statusCode = 404;
+			return next(error);
+		}
+		// Find sent request in user's sentRequests array and remove it.
+		const updatedSentRequests = user.sentRequests.filter(
+			r => r.toString() !== requestReceiverId
+		);
+		user.sentRequests = updatedSentRequests;
+		await user.save();
+		// Find request receiver in database.
+		const requestReceiver = await User.findById(requestReceiverId);
+		if (!requestReceiver) {
+			const error = new Error(
+				'Ther receiver of this request could not be found.'
+			);
+			error.statusCode = 404;
+			return next(error);
+		}
+		// Find request in receiver's receivedRequests array and remove it.
+		const updatedReceivedRequests = requestReceiver.receivedRequests.filter(
+			r => r.toString() !== userId
+		);
+		requestReceiver.receivedRequests = updatedReceivedRequests;
+		await requestReceiver.save();
+		res.status(200).json({ message: 'Request deleted.' });
+	} catch (err) {
+		if (!err.statusCode) {
+			err.statusCode = 500;
+		}
+		next(err);
+	}
+};
+
 exports.addNewContact = async (req, res, next) => {
 	const userId = req.userId;
 	const requestSenderId = req.body.requestSenderId;

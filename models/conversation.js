@@ -25,17 +25,7 @@ const conversationSchema = new Schema({
 			ref: 'Message',
 			required: true
 		}
-	],
-	contactIsOnline: {
-		type: Boolean,
-		default: false,
-		required: true
-	},
-	contactHasSeenMessages: {
-		type: Boolean,
-		default: false,
-		required: true
-	}
+	]
 });
 
 module.exports = mongoose.model('Conversation', conversationSchema);
