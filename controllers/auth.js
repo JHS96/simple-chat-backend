@@ -5,6 +5,7 @@ const AWS = require('aws-sdk');
 const fs = require('fs');
 
 const User = require('../models/user');
+const { clearDir } = require('../util/clearDirectory');
 
 exports.signup = async (req, res, next) => {
 	const name = req.body.name;
@@ -31,6 +32,7 @@ exports.signup = async (req, res, next) => {
 		// If user with this email address already exists in database, abort new user creation.
 		const existingUser = await User.findOne({ email: email });
 		if (existingUser) {
+			clearDir('temp'); // Ensures "/temp" directory is cleared of images submitted during failed signup.
 			const error = new Error(
 				'Email address already taken. Please use another email address.'
 			);
