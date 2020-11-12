@@ -6,6 +6,7 @@ const authRoutes = require('./routes/auth');
 const contactRoutes = require('./routes/contact');
 const messageRoutes = require('./routes/messages');
 const avatarRoutes = require('./routes/avatar');
+const accountRoutes = require('./routes/account');
 
 require('dotenv').config();
 
@@ -17,6 +18,7 @@ app.use('/auth', authRoutes);
 app.use('/contact', contactRoutes);
 app.use('/messages', messageRoutes);
 app.use('/avatar', avatarRoutes);
+app.use('/account', accountRoutes);
 
 // Error handling middleware
 app.use((error, req, res, next) => {

@@ -3,9 +3,11 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const AWS = require('aws-sdk');
 const fs = require('fs');
+const { generate } = require('randomstring');
 
 const User = require('../models/user');
 const { clearDir } = require('../util/clearDirectory');
+const { sendConfirmationEMail } = require('../util/sendEmail');
 
 exports.signup = async (req, res, next) => {
 	const name = req.body.name;
@@ -13,18 +15,11 @@ exports.signup = async (req, res, next) => {
 	const password = req.body.password;
 
 	const saveUser = async user => {
+		// Save user and send confirmation email.
 		const result = await user.save();
-		// Generate signed token.
-		const token = jwt.sign(
-			{ email: result.email, userId: result._id.toString() },
-			process.env.JWT_SECRET,
-			{ expiresIn: '12h' }
-		);
-		// Send back userId and auth token.
+		sendConfirmationEMail(result);
 		res.status(201).json({
-			message: 'User created successfully.',
-			userId: result._id,
-			token: token
+			message: `An email has been sent to: ${user.email}. Please check your inbox and click on the verification link in order to confirm your email address and activate your account. Please allow a few minutes for the email to arrive.`
 		});
 	};
 
@@ -69,7 +64,9 @@ exports.signup = async (req, res, next) => {
 						name: name,
 						email: email,
 						password: hashedPassword,
-						avatarUrl: avatarUrl
+						avatarUrl: avatarUrl,
+						activationToken: generate(64),
+						activationTokenExpiration: Date.now() + 1000 * 60 * 60
 					});
 					saveUser(newUser);
 				}
@@ -79,7 +76,9 @@ exports.signup = async (req, res, next) => {
 			const newUser = new User({
 				name: name,
 				email: email,
-				password: hashedPassword
+				password: hashedPassword,
+				activationToken: generate(64),
+				activationTokenExpiration: Date.now() + 1000 * 60 * 60
 			});
 			saveUser(newUser);
 		}
@@ -107,6 +106,12 @@ exports.login = async (req, res, next) => {
 		if (!passwordMatch) {
 			const error = new Error('Password incorrect.');
 			error.statusCode = 401;
+			return next(error);
+		}
+		// If this account has not been activated yet, throw error.
+		if (!user.isActive) {
+			const error = new Error('Your email address has not been confirmed yet.');
+			error.statusCode = 403;
 			return next(error);
 		}
 		// Generate signed token.
