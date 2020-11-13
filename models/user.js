@@ -40,12 +40,11 @@ const userSchema = new Schema(
 			default: false,
 			required: true
 		},
-		activationToken: {
-			type: String
-		},
-		activationTokenExpiration: {
-			type: Date
-		}
+		activationToken: { type: String },
+		activationTokenExpiration: { type: Date },
+		passwordResetToken: { type: String },
+		passwordResetTokenExpiration: { type: Date },
+		resetRequestCount: { type: Number }
 	},
 	{ timestamps: true }
 );

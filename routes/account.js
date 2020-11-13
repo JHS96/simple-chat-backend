@@ -14,4 +14,8 @@ router.post(
 	accountController.resendConfirmationEmail
 );
 
+router.post('/request-reset-password', accountController.requestResetPassword);
+
+router.post('/update-password', accountController.updatePassword);
+
 module.exports = router;

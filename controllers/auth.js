@@ -7,7 +7,7 @@ const { generate } = require('randomstring');
 
 const User = require('../models/user');
 const { clearDir } = require('../util/clearDirectory');
-const { sendConfirmationEMail } = require('../util/sendEmail');
+const { sendConfirmationEmail } = require('../util/sendEmail');
 
 exports.signup = async (req, res, next) => {
 	const name = req.body.name;
@@ -17,7 +17,7 @@ exports.signup = async (req, res, next) => {
 	const saveUser = async user => {
 		// Save user and send confirmation email.
 		const result = await user.save();
-		sendConfirmationEMail(result);
+		sendConfirmationEmail(result);
 		res.status(201).json({
 			message: `An email has been sent to: ${user.email}. Please check your inbox and click on the verification link in order to confirm your email address and activate your account. Please allow a few minutes for the email to arrive.`
 		});
