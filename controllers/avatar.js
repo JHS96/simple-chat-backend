@@ -3,6 +3,7 @@ const fs = require('fs');
 const AWS = require('aws-sdk');
 
 const User = require('../models/user');
+const { genericError, catchBlockError } = require('../util/errorHandlers');
 
 const awsConfig = () => {
 	return AWS.config.update({
@@ -17,12 +18,10 @@ exports.deleteAvatarImg = async (req, res, next) => {
 		// Find user requesting the deletion of his/her avatar image.
 		const user = await User.findById(req.userId);
 		if (!user) {
-			const error = new Error('User not found.');
-			error.statusCode = 404;
-			return next(error);
+			return genericError('User not found.', 404, next);
 		}
 		if (user.avatarUrl === process.env.AWS_DEFAULT_AVATAR_URL) {
-			return res.json({ message: 'Cannot delete default avatar image!' });
+			return genericError('Cannot delete default avatar image!', 403, next);
 		}
 		awsConfig(); // Configuration for AWS
 		const s3 = new AWS.S3();
@@ -44,26 +43,19 @@ exports.deleteAvatarImg = async (req, res, next) => {
 			}
 		});
 	} catch (err) {
-		if (!err.statusCode) {
-			err.statusCode = 500;
-			return next(err);
-		}
+		catchBlockError(err, next);
 	}
 };
 
 exports.updateAvatarImg = async (req, res, next) => {
 	if (!req.file) {
-		const error = new Error('No file selected!');
-		error.statusCode = 422;
-		return next(error);
+		return genericError('No file selected!', 422, next);
 	}
 	try {
 		// Find user that wishes to update avatar image.
 		const user = await User.findById(req.userId);
 		if (!user) {
-			const error = new Error('User not found');
-			error.statusCode = 404;
-			return next(error);
+			return genericError('User not found', 404, next);
 		}
 		// Check if user uses default avatar image or custom image.
 		// If user's old avatar image is a custom image, delete old image.
@@ -106,9 +98,6 @@ exports.updateAvatarImg = async (req, res, next) => {
 			}
 		});
 	} catch (err) {
-		if (!err.statusCode) {
-			err.statusCode = 500;
-		}
-		return next(err);
+		catchBlockError(err, next);
 	}
 };

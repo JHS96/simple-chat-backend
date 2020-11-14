@@ -1,5 +1,6 @@
 const User = require('../models/user');
 const Conversation = require('../models/conversation');
+const { genericError, catchBlockError } = require('../util/errorHandlers');
 
 exports.searchUsers = async (req, res, next) => {
 	const searchTerm = req.body.searchTerm;
@@ -19,10 +20,7 @@ exports.searchUsers = async (req, res, next) => {
 		});
 		res.status(200).json({ data: data });
 	} catch (err) {
-		if (!err.statusCode) {
-			err.statusCode = 500;
-		}
-		return next(err);
+		catchBlockError(err, naxt);
 	}
 };
 
@@ -34,38 +32,34 @@ exports.requestContact = async (req, res, next) => {
 			'conversations'
 		);
 		if (!reqSender) {
-			const error = new Error('Could not find request sender.');
-			error.statusCode = 404;
-			return next(error);
+			return genericError('User not found.', 404, next);
 		}
 		// If request sender already has this person in their conversations array, throw error.
 		const existingContact = reqSender.conversations.findIndex(
 			conversation => conversation.contactId === requestReceiverId
 		);
 		if (existingContact >= 0) {
-			const error = new Error('Contact already exists.');
-			error.statusCode = 409;
-			return next(error);
+			return genericError('Contact already exists.', 409, next);
 		}
 		// If request has already been sent, don't send it again
 		const alreadySent = reqSender.sentRequests.findIndex(
 			c => c._id.toString() === requestReceiverId
 		);
 		if (alreadySent >= 0) {
-			const error = new Error(
-				'A contact request has already been sent to this user.'
+			return genericError(
+				'A contact request has already been sent to this user.',
+				409,
+				next
 			);
-			error.statusCode = 409;
-			return next(error);
 		}
 		// Add contact request sender to receiver's receivedRequests array
 		const reqReceiver = await User.findById(requestReceiverId);
 		if (!reqReceiver) {
-			const error = new Error(
-				'Could not user to whom this request should be sent.'
+			return genericError(
+				'Could not user to whom this request should be sent.',
+				404,
+				next
 			);
-			error.statusCode = 404;
-			return next(error);
 		}
 		reqReceiver.receivedRequests.push(reqSender);
 		await reqReceiver.save();
@@ -74,10 +68,7 @@ exports.requestContact = async (req, res, next) => {
 		await reqSender.save();
 		res.status(201).json({ message: 'Contact request sent.' });
 	} catch (err) {
-		if (!err.statusCode) {
-			err.statusCode = 500;
-		}
-		next(err);
+		catchBlockError(err, next);
 	}
 };
 
@@ -88,9 +79,7 @@ exports.deleteSentRequest = async (req, res, next) => {
 		// Find user in database.
 		const user = await User.findById(userId);
 		if (!user) {
-			const error = new Error('User not found.');
-			error.statusCode = 404;
-			return next(error);
+			return genericError('User not found.', 404, next);
 		}
 		// Find sent request in user's sentRequests array and remove it.
 		const updatedSentRequests = user.sentRequests.filter(
@@ -101,11 +90,11 @@ exports.deleteSentRequest = async (req, res, next) => {
 		// Find request receiver in database.
 		const requestReceiver = await User.findById(requestReceiverId);
 		if (!requestReceiver) {
-			const error = new Error(
-				'Ther receiver of this request could not be found.'
+			return genericError(
+				'The receiver of this request could not be found.',
+				404,
+				next
 			);
-			error.statusCode = 404;
-			return next(error);
 		}
 		// Find request in receiver's receivedRequests array and remove it.
 		const updatedReceivedRequests = requestReceiver.receivedRequests.filter(
@@ -115,10 +104,7 @@ exports.deleteSentRequest = async (req, res, next) => {
 		await requestReceiver.save();
 		res.status(200).json({ message: 'Request deleted.' });
 	} catch (err) {
-		if (!err.statusCode) {
-			err.statusCode = 500;
-		}
-		next(err);
+		catchBlockError(err, next);
 	}
 };
 
@@ -129,9 +115,7 @@ exports.deleteReceivedRequest = async (req, res, next) => {
 		// Find user in database.
 		const user = await User.findById(userId);
 		if (!user) {
-			const error = new Error('User not found.');
-			error.statusCode = 404;
-			return next(error);
+			return genericError('User not found.', 404, next);
 		}
 		// Remove request from user's receivedRequests array.
 		const updatedReceivedRequests = user.receivedRequests.filter(
@@ -141,10 +125,7 @@ exports.deleteReceivedRequest = async (req, res, next) => {
 		await user.save();
 		res.status(200).json({ message: 'Request deleted.' });
 	} catch (err) {
-		if (!err.statusCode) {
-			err.statusCode = 500;
-		}
-		next(err);
+		catchBlockError(err, next);
 	}
 };
 
@@ -155,18 +136,14 @@ exports.addNewContact = async (req, res, next) => {
 		// If user to which contact should be added could not be found, throw error.
 		const user = await User.findById(userId).populate('conversations');
 		if (!user) {
-			const error = new Error('Uanable to find user to add this contact to.');
-			error.statusCode = 404;
-			return next(error);
+			return genericError('User not found.', 404, next);
 		}
 		// If request sender could not be found, throw error.
 		const requestSender = await User.findById(requestSenderId).populate(
 			'conversations'
 		);
 		if (!requestSender) {
-			const error = new Error('New contact details could not be found.');
-			error.statusCode = 404;
-			return next(error);
+			return genericError('New contact details could not be found.', 404, next);
 		}
 		// If request sender or receiver already has this contact in their conversations array, throw error.
 		const senderHasContact = requestSender.conversations.findIndex(
@@ -176,9 +153,7 @@ exports.addNewContact = async (req, res, next) => {
 			c => c.contactId === requestSenderId
 		);
 		if (senderHasContact >= 0 || userHasContact >= 0) {
-			const error = new Error('Contact already exists.');
-			error.statusCode = 409;
-			return next(error);
+			return genericError('Contact already exists.', 409, next);
 		}
 		// Add request sender to user's conversations array and remove from user's receivedRequests array
 		// also, create a Conversation Copy for user and add to user's conversations array
@@ -217,10 +192,7 @@ exports.addNewContact = async (req, res, next) => {
 		await userConCopy.save();
 		res.status(201).json({ message: 'Contact added.' });
 	} catch (err) {
-		if (!err.statusCode) {
-			err.statusCode = 500;
-		}
-		next(err);
+		catchBlockError(err, next);
 	}
 };
 
@@ -230,9 +202,7 @@ exports.getSentRequests = async (req, res, next) => {
 		// Find user and return info on items in sentRequests array.
 		const user = await User.findById(userId).populate('sentRequests');
 		if (!user) {
-			const error = new Error('User not found.');
-			error.statusCode = 404;
-			return next(error);
+			return genericError('User not found.', 404, next);
 		}
 		const data = [];
 		user.sentRequests.forEach(sentReq => {
@@ -244,10 +214,7 @@ exports.getSentRequests = async (req, res, next) => {
 		});
 		res.status(200).json({ data: data });
 	} catch (err) {
-		if (!err.statusCode) {
-			err.statusCode = 500;
-		}
-		return next(err);
+		catchBlockError(err, next);
 	}
 };
 
@@ -257,9 +224,7 @@ exports.getReceivedRequests = async (req, res, next) => {
 		// Find user and return info on items in sentRequests array.
 		const user = await User.findById(userId).populate('receivedRequests');
 		if (!user) {
-			const error = new Error('User not found.');
-			error.statusCode = 404;
-			return next(error);
+			return genericError('User not found.', 404, next);
 		}
 		const data = [];
 		user.receivedRequests.forEach(recReq => {
@@ -271,9 +236,6 @@ exports.getReceivedRequests = async (req, res, next) => {
 		});
 		res.status(200).json({ data: data });
 	} catch (err) {
-		if (!err.statusCode) {
-			err.statusCode = 500;
-		}
-		return next(err);
+		catchBlockError(err, next);
 	}
 };

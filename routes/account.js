@@ -5,7 +5,7 @@ const accountController = require('../controllers/account');
 const router = express.Router();
 
 router.get(
-	'/confirm/:userId/:activationtoken',
+	'/confirm-email/:userId/:activationtoken',
 	accountController.confirmEmailAddress
 );
 

@@ -8,6 +8,7 @@ const { generate } = require('randomstring');
 const User = require('../models/user');
 const { clearDir } = require('../util/clearDirectory');
 const { sendConfirmationEmail } = require('../util/sendEmail');
+const { genericError, catchBlockError } = require('../util/errorHandlers');
 
 exports.signup = async (req, res, next) => {
 	const name = req.body.name;
@@ -28,11 +29,11 @@ exports.signup = async (req, res, next) => {
 		const existingUser = await User.findOne({ email: email });
 		if (existingUser) {
 			clearDir('temp'); // Ensures "/temp" directory is cleared of images submitted during failed signup.
-			const error = new Error(
-				'Email address already taken. Please use another email address.'
+			return genericError(
+				'Email address already taken. Please use another email address.',
+				422,
+				next
 			);
-			error.statusCode = 422;
-			return next(error);
 		}
 		const hashedPassword = await bcrypt.hash(password, 12);
 
@@ -83,10 +84,7 @@ exports.signup = async (req, res, next) => {
 			saveUser(newUser);
 		}
 	} catch (err) {
-		if (!err.statusCode) {
-			err.statusCode = 500;
-		}
-		next(err);
+		catchBlockError(err, next);
 	}
 };
 
@@ -97,22 +95,20 @@ exports.login = async (req, res, next) => {
 	try {
 		const user = await User.findOne({ email: email });
 		if (!user) {
-			const error = new Error('No user for this email could be found.');
-			error.statusCode = 404;
-			return next(error);
+			return genericError('No user for this email could be found.', 404, next);
 		}
 		// Check if password matches.
 		const passwordMatch = await bcrypt.compare(password, user.password);
 		if (!passwordMatch) {
-			const error = new Error('Password incorrect.');
-			error.statusCode = 401;
-			return next(error);
+			return genericError('Password incorrect.', 401, next);
 		}
 		// If this account has not been activated yet, throw error.
 		if (!user.isActive) {
-			const error = new Error('Your email address has not been confirmed yet.');
-			error.statusCode = 403;
-			return next(error);
+			return genericError(
+				'Your email address has not been confirmed yet.',
+				403,
+				next
+			);
 		}
 		// Generate signed token.
 		const token = jwt.sign(
@@ -126,9 +122,6 @@ exports.login = async (req, res, next) => {
 			token: token
 		});
 	} catch (err) {
-		if (!err.statusCode) {
-			err.statusCode = 500;
-		}
-		next(err);
+		catchBlockError(err, next);
 	}
 };

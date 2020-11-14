@@ -1,6 +1,7 @@
 const User = require('../models/user');
 const Conversation = require('../models/conversation');
 const Message = require('../models/message');
+const { genericError, catchBlockError } = require('../util/errorHandlers');
 
 exports.sendMessage = async (req, res, next) => {
 	const senderConversationId = req.body.senderConversationId;
@@ -9,6 +10,9 @@ exports.sendMessage = async (req, res, next) => {
 	try {
 		// Get name of the message sender & Create message copy for receiver
 		const sender = await User.findById(req.userId);
+		if (!user) {
+			return genericError('User not found', 404, next);
+		}
 		const receiverMsgCopy = new Message({
 			senderName: sender.name,
 			senderConversationId: senderConversationId,
@@ -20,11 +24,11 @@ exports.sendMessage = async (req, res, next) => {
 		// Find receiver's copy of conversation and add message to thread array
 		const receiverCon = await Conversation.findById(receiverConversationId);
 		if (!receiverCon) {
-			const error = new Error(
-				'Message not delivered. The intended recipient of this message does not appear to have an established conversation with you.'
+			return genericError(
+				'Message not delivered. The intended recipient of this message does not appear to have an established conversation with you.',
+				404,
+				next
 			);
-			error.statusCode = 404;
-			return next(error);
 		}
 		receiverCon.thread.push(receiveResult);
 		await receiverCon.save();
@@ -40,20 +44,17 @@ exports.sendMessage = async (req, res, next) => {
 		// Find sender's copy of conversation and add message to thread array
 		const senderCon = await Conversation.findById(senderConversationId);
 		if (!senderCon) {
-			const error = new Error(
-				'Message not delivered. You do not appear to have an established conversation with the intended recipient of this message.'
+			return genericError(
+				'Message not delivered. You do not appear to have an established conversation with the intended recipient of this message.',
+				404,
+				next
 			);
-			error.statusCode = 404;
-			return next(error);
 		}
 		senderCon.thread.push(sendResult);
 		await senderCon.save();
 		res.status(200).json({ message: 'Message sent.' });
 	} catch (err) {
-		if (!err.statusCode) {
-			err.statusCode = 500;
-		}
-		next(err);
+		catchBlockError(err, next);
 	}
 };
 
@@ -63,16 +64,11 @@ exports.getAllConversations = async (req, res, next) => {
 		// Find requesting user by id extracted from token in /middleware/is-auth.js
 		const user = await User.findById(userId).populate('conversations');
 		if (!user) {
-			const error = new Error('User not found.');
-			error.statusCode = 404;
-			return next(error);
+			return genericError('User not found.', 404, next);
 		}
 		res.status(200).json({ data: user.conversations });
 	} catch (err) {
-		if (!err.statusCode) {
-			err.statusCode = 500;
-		}
-		return next(err);
+		catchBlockError(err, next);
 	}
 };
 
@@ -84,25 +80,20 @@ exports.getConversation = async (req, res, next) => {
 			'thread'
 		);
 		if (!conversation) {
-			const error = new Error('Conversation not found.');
-			error.statusCode = 404;
-			return next(error);
+			return genericError('Conversation not found.', 404, next);
 		}
 		// If the requesting user's userId doesn't match the conversationOwner throw error.
 		if (req.userId !== conversation.conversationOwner.toString()) {
-			const error = new Error(
-				'You are not authorized to view this conversation.'
+			return genericError(
+				'You are not authorized to view this conversation.',
+				401,
+				next
 			);
-			error.statusCode = 401;
-			return next(error);
 		}
 		res
 			.status(200)
 			.json({ message: 'Conversation found.', data: conversation });
 	} catch (err) {
-		if (!err.statusCode) {
-			err.statusCode = 500;
-		}
-		return next(err);
+		catchBlockError(err, next);
 	}
 };

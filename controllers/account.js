@@ -6,34 +6,27 @@ const {
 	sendConfirmationEmail,
 	sendPasswordResetLink
 } = require('../util/sendEmail');
+const { genericError, catchBlockError } = require('../util/errorHandlers');
 
 exports.confirmEmailAddress = async (req, res, next) => {
 	const activationToken = req.params.activationtoken;
 	if (!activationToken) {
-		const error = new Error('No activation token provided');
-		error.statusCode = 422;
-		return next(error);
+		return genericError('No activation token provided', 422, next);
 	}
 	// Find user with matching activation token.
 	const userId = req.params.userId;
 	try {
 		const user = await User.findById(userId);
 		if (!user) {
-			const error = new Error('User account not found.');
-			error.statusCode = 404;
-			return next(error);
+			return genericError('User account not found.', 404, next);
 		}
 		// Check if user's account has the submitted token as it's activationToken.
 		if (user.activationToken !== activationToken) {
-			const error = new Error('Token invalid!');
-			error.statusCode = 406;
-			return next(error);
+			return genericError('Token invalid!', 406, next);
 		}
 		// Check if token is still valid.
 		if (user.activationTokenExpiration < Date.now()) {
-			const error = new Error('Confirmation link expired!');
-			error.statusCode = 410;
-			return next(error);
+			return genericError('Confirmation link expired!', 410, next);
 		}
 		// If user is found and token is valid, activate the user's account.
 		user.isActive = true;
@@ -45,10 +38,7 @@ exports.confirmEmailAddress = async (req, res, next) => {
 				'Thank you for confirming your email address. You may now log in to your account.'
 		});
 	} catch (err) {
-		if (!err.statusCode) {
-			err.statusCode = 500;
-		}
-		next(err);
+		catchBlockError(err, next);
 	}
 };
 
@@ -58,14 +48,14 @@ exports.resendConfirmationEmail = async (req, res, next) => {
 		// Find user's inactive account.
 		const user = await User.findOne({ email: email });
 		if (!user) {
-			const error = new Error('User not found.');
-			error.statusCode = 404;
-			return next(error);
+			return genericError('User not found.', 404, next);
 		}
 		if (user.isActive) {
-			return res
-				.status(409)
-				.json({ message: 'This email address is already confirmed!' });
+			return genericError(
+				'This email address is already confirmed!',
+				409,
+				next
+			);
 		}
 		// Reset the user's activationToken and activationTokenExpiration.
 		user.isActive = false;
@@ -76,10 +66,7 @@ exports.resendConfirmationEmail = async (req, res, next) => {
 		sendConfirmationEmail(result);
 		res.status(200).json({ message: 'Email sent. Please check your inbox' });
 	} catch (err) {
-		if (!err.statusCode) {
-			err.statusCode = 500;
-		}
-		next(err);
+		catchBlockError(err, next);
 	}
 };
 
@@ -89,17 +76,15 @@ exports.requestResetPassword = async (req, res, next) => {
 		// Find user with matching email address.
 		const user = await User.findOne({ email: email });
 		if (!user) {
-			const error = new Error('User not found');
-			error.statusCode = 404;
-			return next(error);
+			return genericError('User not found', 404, next);
 		}
 		// If user has requested too many password resets, lock the account.
 		if (user.resetRequestCount && user.resetRequestCount >= 3) {
-			const error = new Error(
-				'You have already requested a password reset 3 times. For security reasons you will now need to contact Support for assistance to reset your password.'
+			return genericError(
+				'You have already requested a password reset 3 times. For security reasons you will now need to contact Support for assistance to reset your password.',
+				429,
+				next
 			);
-			error.statusCode = 429;
-			return next(error);
 		}
 		// Generate reset token & expiration time and save to user's record in database.
 		user.passwordResetToken = generate(64);
@@ -114,10 +99,7 @@ exports.requestResetPassword = async (req, res, next) => {
 			message: `Password reset instructions sent to ${email}. Please check your inbox.`
 		});
 	} catch (err) {
-		if (!err.statusCode) {
-			err.statusCode = 500;
-		}
-		next(err);
+		catchBlockError(err, next);
 	}
 };
 
@@ -129,20 +111,15 @@ exports.updatePassword = async (req, res, next) => {
 		// Find user in database.
 		const user = await User.findById(userId);
 		if (!user) {
-			const error = new Error('User not found.');
-			error.statusCode = 404;
-			return next(error);
+			return genericError('User not found.', 404, next);
 		}
 		// Check that passwordResetToken is correct.
 		if (user.passwordResetToken !== passwordResetToken) {
-			const error = new Error('Password reset token invalid!');
-			return next(error);
+			return genericError('Password reset token invalid!', 406, next);
 		}
 		// Check that passwordResetToken is not expired.
 		if (user.passwordResetTokenExpiration < Date.now()) {
-			const error = new Error('Password reset token expired!');
-			error.statusCode = 410;
-			return next(error);
+			return genericError('Password reset token expired!', 410, next);
 		}
 		// Encrypt new password.
 		const hashedPassword = await bcrypt.hash(newPassword, 12);
@@ -157,9 +134,6 @@ exports.updatePassword = async (req, res, next) => {
 				'Password updated. You may now log in to your account with your new password.'
 		});
 	} catch (err) {
-		if (!err.statusCode) {
-			err.statusCode = 500;
-		}
-		next(err);
+		catchBlockError(err, next);
 	}
 };
