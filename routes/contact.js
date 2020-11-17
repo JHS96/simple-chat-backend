@@ -35,4 +35,6 @@ router.post(
 	contactController.removeFromBlockedList
 );
 
+router.get('/get-blocked-list', isAuth, contactController.getBlockedList);
+
 module.exports = router;

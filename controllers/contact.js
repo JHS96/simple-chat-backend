@@ -342,3 +342,27 @@ exports.removeFromBlockedList = async (req, res, next) => {
 		catchBlockError(err, next);
 	}
 };
+
+exports.getBlockedList = async (req, res, next) => {
+	const userId = req.userId;
+	try {
+		// Find user in database.
+		const user = await User.findById(userId).populate('blockedList');
+		if (!user) {
+			return genericError('User not found.', 404, next);
+		}
+		// Retrieve data from blockedList.
+		let data = [];
+		for (const item of user.blockedList) {
+			data.push({
+				name: item.name,
+				id: item._id.toString(),
+				avatarUrl: item.avatarUrl
+			});
+		}
+		// Send response with data on users in blockedList.
+		res.status(200).json({ data: data });
+	} catch (err) {
+		catchBlockError(err, next);
+	}
+};
