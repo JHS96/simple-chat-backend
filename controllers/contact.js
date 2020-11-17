@@ -304,3 +304,41 @@ exports.addToBlockedList = async (req, res, next) => {
 		catchBlockError(err, next);
 	}
 };
+
+exports.removeFromBlockedList = async (req, res, next) => {
+	const userId = req.userId;
+	const userToUnblockId = req.body.userToUnblockId;
+	try {
+		// Find user in database.
+		const user = await User.findById(userId);
+		if (!user) {
+			return genericError('User not found.', 404, next);
+		}
+		// Check if userToUnblock is in user's blodkedList.
+		const userToUnBlockIdx = user.blockedList.findIndex(
+			item => item._id.toString() === userToUnblockId
+		);
+		if (userToUnBlockIdx === -1) {
+			return genericError('This user is not in your Blocked list.', 404, next);
+		}
+		// Remove userToUnblock from user's blockedList.
+		const updatedBlockedList = user.blockedList.filter(
+			item => item._id.toString() !== userToUnblockId
+		);
+		user.blockedList = updatedBlockedList;
+		await user.save();
+		// Find userToUnblock in database. If userToUnblock is not found because he/she maybe
+		// deleted his/her account, no need to throw error. Just return "next()".
+		const userToUnblock = await User.findById(userToUnblockId);
+		if (!userToUnblock) return next();
+		// Remove user from userToUnblock's blockedBy list.
+		const updatedBlockedBy = userToUnblock.blockedBy.filter(
+			item => item._id.toString() !== userId
+		);
+		userToUnblock.blockedBy = updatedBlockedBy;
+		await userToUnblock.save();
+		res.status(200).json({ message: 'Successfully unblocked.' });
+	} catch (err) {
+		catchBlockError(err, next);
+	}
+};
