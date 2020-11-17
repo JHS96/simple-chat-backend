@@ -4,15 +4,38 @@ const Message = require('../models/message');
 const { genericError, catchBlockError } = require('../util/errorHandlers');
 
 exports.sendMessage = async (req, res, next) => {
+	const requestReceiverId = req.body.requestReceiverId;
 	const senderConversationId = req.body.senderConversationId;
 	const receiverConversationId = req.body.receiverConversationId;
 	const msgBody = req.body.msgBody;
 	try {
-		// Get name of the message sender & Create message copy for receiver
+		// Get name of the message sender.
 		const sender = await User.findById(req.userId);
-		if (!user) {
+		if (!sender) {
 			return genericError('User not found', 404, next);
 		}
+		// If sender has blocked (or been blocked by) reciver, abort sending message.
+		const blockedIdx = sender.blockedList.findIndex(
+			item => item._id.toString() === requestReceiverId
+		);
+		if (blockedIdx >= 0) {
+			return genericError(
+				'Unable to send message while this user is in your Blocked list.',
+				409,
+				next
+			);
+		}
+		const beenBlockedByIdx = sender.blockedBy.findIndex(
+			item => item._id.toString() === requestReceiverId
+		);
+		if (beenBlockedByIdx >= 0) {
+			return genericError(
+				'Sorry, you may not send messages to this user.',
+				403,
+				next
+			);
+		}
+		// Create message copy for receiver.
 		const receiverMsgCopy = new Message({
 			senderName: sender.name,
 			senderConversationId: senderConversationId,

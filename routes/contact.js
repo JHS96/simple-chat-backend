@@ -27,4 +27,6 @@ router.post('/request-contact', isAuth, contactController.requestContact);
 
 router.post('/add-contact', isAuth, contactController.addNewContact);
 
+router.post('/add-to-blocked-list', isAuth, contactController.addToBlockedList);
+
 module.exports = router;

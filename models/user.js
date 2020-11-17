@@ -35,6 +35,16 @@ const userSchema = new Schema(
 				required: true
 			}
 		],
+		blockedList: {
+			type: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+			required: true,
+			default: []
+		},
+		blockedBy: {
+			type: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+			required: true,
+			default: []
+		},
 		isActive: {
 			type: Boolean,
 			default: false,

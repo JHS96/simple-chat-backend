@@ -34,6 +34,27 @@ exports.requestContact = async (req, res, next) => {
 		if (!reqSender) {
 			return genericError('User not found.', 404, next);
 		}
+		// If reqSender has blocked (or been blocked by) reqReciver, disallow request.
+		const blockedIdx = reqSender.blockedList.findIndex(
+			item => item._id.toString() === requestReceiverId
+		);
+		if (blockedIdx >= 0) {
+			return genericError(
+				'Unable to send request while this user is in your Blocked list.',
+				409,
+				next
+			);
+		}
+		const beenBlockedByIdx = reqSender.blockedBy.findIndex(
+			item => item._id.toString() === requestReceiverId
+		);
+		if (beenBlockedByIdx >= 0) {
+			return genericError(
+				'Sorry, you may not send a contact request to this user.',
+				403,
+				next
+			);
+		}
 		// If request sender already has this person in their conversations array, throw error.
 		const existingContact = reqSender.conversations.findIndex(
 			conversation => conversation.contactId === requestReceiverId
@@ -235,6 +256,50 @@ exports.getReceivedRequests = async (req, res, next) => {
 			});
 		});
 		res.status(200).json({ data: data });
+	} catch (err) {
+		catchBlockError(err, next);
+	}
+};
+
+exports.addToBlockedList = async (req, res, next) => {
+	const userId = req.userId;
+	const userToBlockId = req.body.userToBlockId;
+	try {
+		// Find user in database.
+		const user = await User.findById(userId);
+		if (!user) {
+			return genericError('User not found.', 404, next);
+		}
+		// Find user to be blocked.
+		const userToBlock = await User.findById(userToBlockId);
+		if (!userToBlock) {
+			genericError('User to be blocked could not be found.');
+		}
+		// If user to be blocked is already in blocked list don't add again.
+		const userToBlockIndex = user.blockedList.findIndex(
+			item => item._id.toString() === userToBlockId
+		);
+		if (userToBlockIndex >= 0) {
+			return genericError('User already blocked.');
+		}
+		// Add userToBlock to blocked list.
+		user.blockedList.push(userToBlock);
+		// Remove userToBlock from user's sentRequests and/or receivedRequests arrays if present.
+		const updatedSentReq = user.sentRequests.filter(
+			r => r._id.toString() !== userToBlockId
+		);
+		const updatedReceivedReq = user.receivedRequests.filter(
+			r => r._id.toString() !== userToBlockId
+		);
+		user.sentRequests = updatedSentReq;
+		user.receivedRequests = updatedReceivedReq;
+		await user.save();
+		// Add user to the blockedBy list of the user that got blocked.
+		userToBlock.blockedBy.push(user);
+		await userToBlock.save();
+		res
+			.status(200)
+			.json({ message: 'The user has been successfully blocked.' });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
