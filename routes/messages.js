@@ -19,4 +19,12 @@ router.get(
 
 router.post('/send-message', isAuth, messagesController.sendMessage);
 
+router.delete('/delete-message', isAuth, messagesController.deleteMessage);
+
+router.delete(
+	'/delete-message-for-both',
+	isAuth,
+	messagesController.deleteMessageForBoth
+);
+
 module.exports = router;

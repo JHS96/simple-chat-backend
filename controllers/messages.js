@@ -1,3 +1,5 @@
+const mongoose = require('mongoose');
+
 const User = require('../models/user');
 const Conversation = require('../models/conversation');
 const Message = require('../models/message');
@@ -119,4 +121,45 @@ exports.getConversation = async (req, res, next) => {
 	} catch (err) {
 		catchBlockError(err, next);
 	}
+};
+
+exports.deleteMessage = async (req, res, next) => {
+	const userId = req.userId;
+	const conversationId = req.body.conversationId;
+	const messageId = req.body.messageId;
+	try {
+		// Find conversation.
+		const conversation = await Conversation.findById(conversationId);
+		if (!conversation) {
+			return genericError('This conversation could not be found.', 404, next);
+		}
+		// If userId !== conversationOwner throw error. (Not authorized.)
+		if (userId !== conversation.conversationOwner.toString()) {
+			return genericError(
+				'You are not authorized to delete this message.',
+				403,
+				next
+			);
+		}
+		// Remove reference to message from user's conversation copy thread.
+		const updatedThread = conversation.thread.filter(
+			msgId => msgId.toString() !== messageId
+		);
+		conversation.thread = updatedThread;
+		await conversation.save();
+		// Find message.
+		const message = await Message.findById(messageId);
+		if (!message) {
+			return genericError('Message not found.', 404, next);
+		}
+		// Delete message.
+		await Message.deleteOne({ _id: new mongoose.Types.ObjectId(messageId) });
+		res.status(200).json({ message: 'Message deleted.' });
+	} catch (err) {
+		catchBlockError(err, next);
+	}
+};
+
+exports.deleteMessageForBoth = (req, res, next) => {
+	// Do stuff
 };
