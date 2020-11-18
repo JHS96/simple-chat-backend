@@ -29,11 +29,6 @@ const messageSchema = new Schema(
 			type: Boolean,
 			default: true,
 			required: true
-		},
-		isStarred: {
-			type: Boolean,
-			default: false,
-			required: true
 		}
 	},
 	{ timestamps: true }

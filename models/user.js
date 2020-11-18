@@ -21,11 +21,6 @@ const userSchema = new Schema(
 			required: true,
 			default: process.env.AWS_DEFAULT_AVATAR_URL
 		},
-		userIsOnline: {
-			type: Boolean,
-			required: true,
-			default: false
-		},
 		receivedRequests: [{ type: Schema.Types.ObjectId, ref: 'User' }],
 		sentRequests: [{ type: Schema.Types.ObjectId, ref: 'User' }],
 		conversations: [
@@ -56,7 +51,10 @@ const userSchema = new Schema(
 		passwordResetTokenExpiration: { type: Date },
 		resetRequestCount: { type: Number }
 	},
-	{ timestamps: true }
+	{
+		timestamps: true,
+		versionKey: false
+	}
 );
 
 module.exports = mongoose.model('User', userSchema);
