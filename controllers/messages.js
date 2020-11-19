@@ -6,7 +6,8 @@ const Message = require('../models/message');
 const { genericError, catchBlockError } = require('../util/errorHandlers');
 
 exports.sendMessage = async (req, res, next) => {
-	const requestReceiverId = req.body.requestReceiverId;
+	const userId = req.userId;
+	const msgReceiverId = req.body.requestReceiverId;
 	const senderConversationId = req.body.senderConversationId;
 	const receiverConversationId = req.body.receiverConversationId;
 	const msgBody = req.body.msgBody;
@@ -16,9 +17,25 @@ exports.sendMessage = async (req, res, next) => {
 		if (!sender) {
 			return genericError('User not found', 404, next);
 		}
-		// If sender has blocked (or been blocked by) reciver, abort sending message.
+		// If user isn't owner of senderConversation, disallow sending of message.
+		const senderCon = await Conversation.findById(senderConversationId);
+		if (!senderCon) {
+			return genericError(
+				'Message not delivered. You do not appear to have an established conversation with the intended recipient of this message.',
+				404,
+				next
+			);
+		}
+		if (senderCon.conversationOwner.toString() !== userId) {
+			return genericError(
+				'You are not authorized to send this message.',
+				403,
+				next
+			);
+		}
+		// If sender has blocked (or been blocked by) receiver, abort sending message.
 		const blockedIdx = sender.blockedList.findIndex(
-			item => item._id.toString() === requestReceiverId
+			item => item._id.toString() === msgReceiverId
 		);
 		if (blockedIdx >= 0) {
 			return genericError(
@@ -28,7 +45,7 @@ exports.sendMessage = async (req, res, next) => {
 			);
 		}
 		const beenBlockedByIdx = sender.blockedBy.findIndex(
-			item => item._id.toString() === requestReceiverId
+			item => item._id.toString() === msgReceiverId
 		);
 		if (beenBlockedByIdx >= 0) {
 			return genericError(
@@ -40,6 +57,7 @@ exports.sendMessage = async (req, res, next) => {
 		// Create message copy for receiver.
 		const receiverMsgCopy = new Message({
 			senderName: sender.name,
+			senderId: userId,
 			senderConversationId: senderConversationId,
 			receiverConversationId: receiverConversationId,
 			message: msgBody,
@@ -59,22 +77,18 @@ exports.sendMessage = async (req, res, next) => {
 		await receiverCon.save();
 		// Create message copy for sender
 		const senderMsgCopy = new Message({
-			senderName: 'Me',
+			senderName: 'Me: ' + sender.name,
+			senderId: userId,
 			senderConversationId: senderConversationId,
 			receiverConversationId: receiverConversationId,
 			receiversMsgCopyId: receiveResult._id.toString(),
 			message: msgBody
 		});
 		const sendResult = await senderMsgCopy.save();
+		// Re-save message receiver's copy of message, this time referencing sender's (newly created) message copy.
+		receiveResult.receiversMsgCopyId = receiveResult._id.toString();
+		await receiveResult.save();
 		// Find sender's copy of conversation and add message to thread array
-		const senderCon = await Conversation.findById(senderConversationId);
-		if (!senderCon) {
-			return genericError(
-				'Message not delivered. You do not appear to have an established conversation with the intended recipient of this message.',
-				404,
-				next
-			);
-		}
 		senderCon.thread.push(sendResult);
 		await senderCon.save();
 		res.status(200).json({ message: 'Message sent.' });
@@ -160,6 +174,74 @@ exports.deleteMessage = async (req, res, next) => {
 	}
 };
 
-exports.deleteMessageForBoth = (req, res, next) => {
-	// Do stuff
+exports.deleteMessageForBoth = async (req, res, next) => {
+	const userId = req.userId;
+	const conversationId = req.body.conversationId;
+	const messageId = req.body.messageId;
+	try {
+		// Find message.
+		const userMsgCopy = await Message.findById(messageId);
+		if (!userMsgCopy) {
+			return genericError('Message not found.', 404, next);
+		}
+		// If userId !== senderId throw error. (Not authorized to delete for both.)
+		if (userId !== userMsgCopy.senderId) {
+			return genericError(
+				'You may not delete this message for both yourself and the message sender.',
+				403,
+				next
+			);
+		}
+		// If isSender flag is false, it means that this is NOT the user's copy of the message,
+		// therefore disallow deletion.
+		if (userMsgCopy.isSender === false) {
+			return genericError('Unauthorized.', 403, next);
+		}
+		// Find user's conversation.
+		const userCon = await Conversation.findById(conversationId);
+		if (!userCon) {
+			return genericError('Conversation not found.', 404, next);
+		}
+		// If userId !== conversationOwner throw error. (Not authorized.)
+		if (userId !== userCon.conversationOwner.toString()) {
+			return genericError(
+				'You are not authorized to delete this message.',
+				403,
+				next
+			);
+		}
+		// Remove reference to message from user's conversation copy's thread.
+		const updatedUserConThread = userCon.thread.filter(
+			msgId => msgId.toString() !== messageId
+		);
+		userCon.thread = updatedUserConThread;
+		await userCon.save();
+		// Find contact's copy of conversation.
+		const contactConId = userCon.contactsConversationId;
+		const contactCon = await Conversation.findById(contactConId);
+		if (contactCon) {
+			const contactMsgCopyId = userMsgCopy.receiversMsgCopyId;
+			// Remove reference to contact's copy of message from contact's conversation copy's thread.
+			const updatedContactConThread = contactCon.thread.filter(
+				msgId => msgId !== contactMsgCopyId
+			);
+			contactCon.thread = updatedContactConThread;
+			await contactCon.save();
+			// Find contact's copy of message.
+			const contactMsgCopy = await Message.findById(contactMsgCopyId);
+			if (contactMsgCopy) {
+				// Alter contact's copy of message.
+				await Message.findByIdAndUpdate(contactMsgCopyId, {
+					message: '...',
+					msgDeletedBySender: true
+				});
+				await contactMsgCopy.save();
+			}
+		}
+		// Delete user's copy of message.
+		await Message.deleteOne({ _id: new mongoose.Types.ObjectId(messageId) });
+		res.status(200).json({ message: 'Message deleted.' });
+	} catch (err) {
+		catchBlockError(err, next);
+	}
 };

@@ -38,7 +38,8 @@ const DB_URI =
 mongoose
 	.connect(DB_URI, {
 		useNewUrlParser: true,
-		useUnifiedTopology: true
+		useUnifiedTopology: true,
+		useFindAndModify: false
 	})
 	.then(result => {
 		app.listen(PORT, () => console.log(`Server listening on port: ${PORT}`));

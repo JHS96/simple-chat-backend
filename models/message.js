@@ -7,6 +7,10 @@ const messageSchema = new Schema(
 			type: String,
 			required: true
 		},
+		senderId: {
+			type: String,
+			required: true
+		},
 		senderConversationId: {
 			type: String,
 			required: true
@@ -17,8 +21,7 @@ const messageSchema = new Schema(
 		},
 		receiversMsgCopyId: {
 			type: String,
-			default:
-				"Same as _id of this message - This message object IS the receiver's copy.",
+			default: '',
 			required: true
 		},
 		message: {
@@ -28,6 +31,11 @@ const messageSchema = new Schema(
 		isSender: {
 			type: Boolean,
 			default: true,
+			required: true
+		},
+		msgDeletedBySender: {
+			type: Boolean,
+			default: false,
 			required: true
 		}
 	},
