@@ -29,4 +29,10 @@ router.delete(
 
 router.delete('/clear-messages', isAuth, messagesController.clearMessages);
 
+router.delete(
+	'/delete-conversation',
+	isAuth,
+	messagesController.deleteConversation
+);
+
 module.exports = router;
