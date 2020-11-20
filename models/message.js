@@ -21,10 +21,14 @@ const messageSchema = new Schema(
 		},
 		receiversMsgCopyId: {
 			type: String,
-			default: '',
+			default: "Reference to the receiver's copy of the message",
 			required: true
 		},
 		message: {
+			type: String,
+			required: true
+		},
+		belongsToConversationId: {
 			type: String,
 			required: true
 		},

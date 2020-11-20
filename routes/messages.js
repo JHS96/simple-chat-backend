@@ -27,4 +27,6 @@ router.delete(
 	messagesController.deleteMessageForBoth
 );
 
+router.delete('/clear-messages', isAuth, messagesController.clearMessages);
+
 module.exports = router;

@@ -61,6 +61,7 @@ exports.sendMessage = async (req, res, next) => {
 			senderConversationId: senderConversationId,
 			receiverConversationId: receiverConversationId,
 			message: msgBody,
+			belongsToConversationId: receiverConversationId,
 			isSender: false
 		});
 		const receiveResult = await receiverMsgCopy.save();
@@ -82,7 +83,8 @@ exports.sendMessage = async (req, res, next) => {
 			senderConversationId: senderConversationId,
 			receiverConversationId: receiverConversationId,
 			receiversMsgCopyId: receiveResult._id.toString(),
-			message: msgBody
+			message: msgBody,
+			belongsToConversationId: senderConversationId
 		});
 		const sendResult = await senderMsgCopy.save();
 		// Re-save message receiver's copy of message, this time referencing sender's (newly created) message copy.
@@ -241,6 +243,29 @@ exports.deleteMessageForBoth = async (req, res, next) => {
 		// Delete user's copy of message.
 		await Message.deleteOne({ _id: new mongoose.Types.ObjectId(messageId) });
 		res.status(200).json({ message: 'Message deleted.' });
+	} catch (err) {
+		catchBlockError(err, next);
+	}
+};
+
+exports.clearMessages = async (req, res, next) => {
+	const userId = req.userId;
+	const conversationId = req.body.conversationId;
+	try {
+		// Find user's conversation copy.
+		const userConCopy = await Conversation.findById(conversationId);
+		if (!userConCopy) {
+			return genericError('Conversation not found.', 404, next);
+		}
+		if (userId !== userConCopy.conversationOwner._id.toString()) {
+			return genericError('Unauthorized.', 403, next);
+		}
+		// Remove all references to messages from user's conversation copy.
+		userConCopy.thread = [];
+		await userConCopy.save();
+		// Delete all messages which belong to user's conversation copy.
+		await Message.deleteMany({ belongsToConversationId: conversationId });
+		res.status(200).json({ message: 'Messages cleared.' });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
