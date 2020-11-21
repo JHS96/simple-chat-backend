@@ -4,11 +4,10 @@ const User = require('../models/user');
 const Conversation = require('../models/conversation');
 const Message = require('../models/message');
 const { genericError, catchBlockError } = require('../util/errorHandlers');
-const user = require('../models/user');
 
 exports.sendMessage = async (req, res, next) => {
 	const userId = req.userId;
-	const msgReceiverId = req.body.requestReceiverId;
+	const msgReceiverId = req.body.msgReceiverId;
 	const senderConversationId = req.body.senderConversationId;
 	const receiverConversationId = req.body.receiverConversationId;
 	const msgBody = req.body.msgBody;
@@ -35,7 +34,7 @@ exports.sendMessage = async (req, res, next) => {
 		if (!sender) {
 			return genericError('User not found', 404, next);
 		}
-		// If user isn't owner of senderConversation, disallow sending of message.
+		// Find user's copy of conversation.
 		const senderCon = await Conversation.findById(senderConversationId);
 		if (!senderCon) {
 			return genericError(
@@ -44,6 +43,7 @@ exports.sendMessage = async (req, res, next) => {
 				next
 			);
 		}
+		// If user isn't owner of senderConversation, disallow sending of message.
 		if (senderCon.conversationOwner.toString() !== userId) {
 			return genericError(
 				'You are not authorized to send this message.',
@@ -72,6 +72,10 @@ exports.sendMessage = async (req, res, next) => {
 				next
 			);
 		}
+		// Receiver isn't the owner of the receiver conversation, disallow sending of message.
+		if (msgReceiverId !== receiverCon.conversationOwner.toString()) {
+			return genericError('Unauthorized', 403, next);
+		}
 		// Create message copy for receiver.
 		const receiverMsgCopy = new Message({
 			senderName: sender.name,
@@ -80,6 +84,7 @@ exports.sendMessage = async (req, res, next) => {
 			receiverConversationId: receiverConversationId,
 			message: msgBody,
 			belongsToConversationId: receiverConversationId,
+			msgCopyOwner: msgReceiverId,
 			isSender: false
 		});
 		const receiveResult = await receiverMsgCopy.save();
@@ -93,6 +98,7 @@ exports.sendMessage = async (req, res, next) => {
 			senderConversationId: senderConversationId,
 			receiverConversationId: receiverConversationId,
 			receiversMsgCopyId: receiveResult._id.toString(),
+			msgCopyOwner: userId,
 			message: msgBody,
 			belongsToConversationId: senderConversationId
 		});
@@ -104,6 +110,16 @@ exports.sendMessage = async (req, res, next) => {
 		senderCon.thread.push(sendResult);
 		await senderCon.save();
 		res.status(200).json({ message: 'Message sent.' });
+	} catch (err) {
+		catchBlockError(err, next);
+	}
+};
+
+exports.toggleIsStarred = async (req, res, next) => {
+	const userId = req.userId;
+	const messageId = req.body.messageId;
+	try {
+		// Toggle isStarred
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -210,7 +226,10 @@ exports.deleteMessageForBoth = async (req, res, next) => {
 			return genericError('Unauthorized.', 403, next);
 		}
 		// If message was sent more that 1 hour ago, disallow delete for both.
-		if (Date.now() > userMsgCopy.createdAt + 1000 * 60 * 60) {
+		if (
+			Date.now() >
+			new Date(userMsgCopy.createdAt).getTime() + 1000 * 60 * 60
+		) {
 			return genericError(
 				'Unable to delete for both. More that 1 hour has passed since the original message was sent.',
 				410,

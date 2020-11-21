@@ -19,6 +19,8 @@ router.get(
 
 router.post('/send-message', isAuth, messagesController.sendMessage);
 
+router.post('/toggle-star', isAuth, messagesController.toggleIsStarred);
+
 router.delete('/delete-message', isAuth, messagesController.deleteMessage);
 
 router.delete(

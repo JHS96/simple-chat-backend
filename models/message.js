@@ -37,6 +37,11 @@ const messageSchema = new Schema(
 			type: String,
 			required: true
 		},
+		msgCopyOwner: {
+			type: String,
+			required: true,
+			default: 'Reference to owner of this copy of the message.'
+		},
 		isSender: {
 			type: Boolean,
 			default: true,
