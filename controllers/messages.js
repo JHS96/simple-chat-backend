@@ -4,6 +4,7 @@ const User = require('../models/user');
 const Conversation = require('../models/conversation');
 const Message = require('../models/message');
 const { genericError, catchBlockError } = require('../util/errorHandlers');
+const user = require('../models/user');
 
 exports.sendMessage = async (req, res, next) => {
 	const userId = req.userId;
@@ -16,7 +17,7 @@ exports.sendMessage = async (req, res, next) => {
 		const receiverCon = await Conversation.findById(receiverConversationId);
 		if (!receiverCon) {
 			return genericError(
-				'Message not delivered. The intended recipient of this message does not appear to have an established conversation with you. The recipient may have deleted their copy of the conversation. The only way to re-establish contact with this user is for you to delete this conversation, and then send a new contact request.',
+				'Message not delivered. The intended recipient of this message does not appear to have an established conversation with you. The recipient may have deleted his/her copy of the conversation, or he/she may have deleted his/her account entirely. The only way to re-establish contact with this user is for you to delete this conversation, and then send a new contact request.',
 				404,
 				next
 			);
@@ -207,6 +208,14 @@ exports.deleteMessageForBoth = async (req, res, next) => {
 		// therefore disallow deletion.
 		if (userMsgCopy.isSender === false) {
 			return genericError('Unauthorized.', 403, next);
+		}
+		// If message was sent more that 1 hour ago, disallow delete for both.
+		if (Date.now() > userMsgCopy.createdAt + 1000 * 60 * 60) {
+			return genericError(
+				'Unable to delete for both. More that 1 hour has passed since the original message was sent.',
+				410,
+				next
+			);
 		}
 		// Find user's conversation.
 		const userCon = await Conversation.findById(conversationId);

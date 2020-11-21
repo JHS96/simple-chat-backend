@@ -28,6 +28,11 @@ const messageSchema = new Schema(
 			type: String,
 			required: true
 		},
+		isStarred: {
+			type: Boolean,
+			default: false,
+			required: true
+		},
 		belongsToConversationId: {
 			type: String,
 			required: true
