@@ -109,7 +109,7 @@ exports.sendMessage = async (req, res, next) => {
 		// Add user's copy of message to thread array of user's(sender's) conversation copy.
 		senderCon.thread.push(sendResult);
 		await senderCon.save();
-		res.status(200).json({ message: 'Message sent.' });
+		res.status(201).json({ message: 'Message sent.' });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -119,7 +119,21 @@ exports.toggleIsStarred = async (req, res, next) => {
 	const userId = req.userId;
 	const messageId = req.body.messageId;
 	try {
-		// Toggle isStarred
+		// Find message in database.
+		const msg = await Message.findById(messageId);
+		if (!msg) {
+			return genericError('Message not found,', 404, next);
+		}
+		// If msgCopyOwner !== userId, disallow toggle.
+		if (msg.msgCopyOwner !== userId) {
+			return genericError('Unauthorized.', 403, next);
+		}
+		// If message isStarred then unstar it, and vice versa.
+		msg.isStarred = msg.isStarred = false ? msg.isStarred : !msg.isStarred;
+		await msg.save();
+		res.status(200).json({
+			message: msg.isStarred ? 'Message starred.' : 'Message unstarred'
+		});
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -183,19 +197,23 @@ exports.deleteMessage = async (req, res, next) => {
 				next
 			);
 		}
+		// Find message.
+		const message = await Message.findById(messageId);
+		if (!message) {
+			return genericError('Message not found.', 404, next);
+		}
+		// If message isStarred, disallow deletion.
+		if (message.isStarred) {
+			return genericError('Unable to delete starred message.', 409, next);
+		}
+		// Delete message.
+		await Message.deleteOne({ _id: new mongoose.Types.ObjectId(messageId) });
 		// Remove reference to message from user's conversation copy thread.
 		const updatedThread = conversation.thread.filter(
 			msgId => msgId.toString() !== messageId
 		);
 		conversation.thread = updatedThread;
 		await conversation.save();
-		// Find message.
-		const message = await Message.findById(messageId);
-		if (!message) {
-			return genericError('Message not found.', 404, next);
-		}
-		// Delete message.
-		await Message.deleteOne({ _id: new mongoose.Types.ObjectId(messageId) });
 		res.status(200).json({ message: 'Message deleted.' });
 	} catch (err) {
 		catchBlockError(err, next);
@@ -307,6 +325,10 @@ exports.clearMessages = async (req, res, next) => {
 		catchBlockError(err, next);
 	}
 };
+
+exports.deleteAllExceptStarred = async (req, res, next) => {
+	// Delete all messages except the starred ones.
+}
 
 exports.deleteConversation = async (req, res, next) => {
 	const userId = req.userId;
