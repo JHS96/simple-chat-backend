@@ -74,7 +74,7 @@ exports.sendMessage = async (req, res, next) => {
 		}
 		// Receiver isn't the owner of the receiver conversation, disallow sending of message.
 		if (msgReceiverId !== receiverCon.conversationOwner.toString()) {
-			return genericError('Unauthorized', 403, next);
+			return genericError('Unauthorized.', 403, next);
 		}
 		// Create message copy for receiver.
 		const receiverMsgCopy = new Message({
@@ -327,8 +327,37 @@ exports.clearMessages = async (req, res, next) => {
 };
 
 exports.deleteAllExceptStarred = async (req, res, next) => {
-	// Delete all messages except the starred ones.
-}
+	const userId = req.userId;
+	const conversationId = req.body.conversationId;
+	try {
+		// Find conversation and populate thread array.
+		const conversation = await Conversation.findById(conversationId).populate(
+			'thread'
+		);
+		if (!conversation) {
+			return genericError('Conversation not found.', 404, next);
+		}
+		// If userId !== conversationOwner, disallow deletion.
+		if (userId !== conversation.conversationOwner.toString()) {
+			return genericError('Unauthorized.', 403, next);
+		}
+		// Remove references to all messages with isSterred: false.
+		const updatedThread = conversation.thread.filter(msg => msg.isStarred);
+		conversation.thread = updatedThread;
+		const updatedCon = await conversation.save();
+		// Delete all messages belonging to this conversation, but only if isStarred: false.
+		await Message.deleteMany({
+			belongsToConversationId: conversationId,
+			isStarred: false
+		});
+		res.status(200).json({
+			message: 'All unstarred messages deleted.',
+			thread: updatedCon.thread
+		});
+	} catch (err) {
+		catchBlockError(err, next);
+	}
+};
 
 exports.deleteConversation = async (req, res, next) => {
 	const userId = req.userId;
