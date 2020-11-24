@@ -35,7 +35,9 @@ exports.sendMessage = async (req, res, next) => {
 			return genericError('User not found', 404, next);
 		}
 		// Find user's copy of conversation.
-		const senderCon = await Conversation.findById(senderConversationId);
+		const senderCon = await Conversation.findById(
+			senderConversationId
+		).populate('thread');
 		if (!senderCon) {
 			return genericError(
 				'Message not delivered. You do not appear to have an established conversation with the intended recipient of this message.',
@@ -108,8 +110,8 @@ exports.sendMessage = async (req, res, next) => {
 		await receiveResult.save();
 		// Add user's copy of message to thread array of user's(sender's) conversation copy.
 		senderCon.thread.push(sendResult);
-		await senderCon.save();
-		res.status(201).json({ message: 'Message sent.' });
+		const updatedCon = await senderCon.save();
+		res.status(201).json({ message: 'Message sent.', data: updatedCon });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -185,7 +187,9 @@ exports.deleteMessage = async (req, res, next) => {
 	const messageId = req.body.messageId;
 	try {
 		// Find conversation.
-		const conversation = await Conversation.findById(conversationId);
+		const conversation = await Conversation.findById(conversationId).populate(
+			'thread'
+		);
 		if (!conversation) {
 			return genericError('This conversation could not be found.', 404, next);
 		}
@@ -210,11 +214,11 @@ exports.deleteMessage = async (req, res, next) => {
 		await Message.deleteOne({ _id: new mongoose.Types.ObjectId(messageId) });
 		// Remove reference to message from user's conversation copy thread.
 		const updatedThread = conversation.thread.filter(
-			msgId => msgId.toString() !== messageId
+			msgId => msgId._id.toString() !== messageId
 		);
 		conversation.thread = updatedThread;
 		await conversation.save();
-		res.status(200).json({ message: 'Message deleted.' });
+		res.status(200).json({ message: 'Message deleted.', data: updatedThread });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -255,7 +259,9 @@ exports.deleteMessageForBoth = async (req, res, next) => {
 			);
 		}
 		// Find user's conversation.
-		const userCon = await Conversation.findById(conversationId);
+		const userCon = await Conversation.findById(conversationId).populate(
+			'thread'
+		);
 		if (!userCon) {
 			return genericError('Conversation not found.', 404, next);
 		}
@@ -269,7 +275,7 @@ exports.deleteMessageForBoth = async (req, res, next) => {
 		}
 		// Remove reference to message from user's conversation copy's thread.
 		const updatedUserConThread = userCon.thread.filter(
-			msgId => msgId.toString() !== messageId
+			msgId => msgId._id.toString() !== messageId
 		);
 		userCon.thread = updatedUserConThread;
 		await userCon.save();
@@ -278,12 +284,6 @@ exports.deleteMessageForBoth = async (req, res, next) => {
 		const contactCon = await Conversation.findById(contactConId);
 		if (contactCon) {
 			const contactMsgCopyId = userMsgCopy.receiversMsgCopyId;
-			// Remove reference to contact's copy of message from contact's conversation copy's thread.
-			const updatedContactConThread = contactCon.thread.filter(
-				msgId => msgId !== contactMsgCopyId
-			);
-			contactCon.thread = updatedContactConThread;
-			await contactCon.save();
 			// Find contact's copy of message.
 			const contactMsgCopy = await Message.findById(contactMsgCopyId);
 			if (contactMsgCopy) {
@@ -297,7 +297,9 @@ exports.deleteMessageForBoth = async (req, res, next) => {
 		}
 		// Delete user's copy of message.
 		await Message.deleteOne({ _id: new mongoose.Types.ObjectId(messageId) });
-		res.status(200).json({ message: 'Message deleted.' });
+		res
+			.status(200)
+			.json({ message: 'Message deleted.', data: updatedUserConThread });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -314,6 +316,9 @@ exports.clearMessages = async (req, res, next) => {
 		}
 		if (userId !== userConCopy.conversationOwner._id.toString()) {
 			return genericError('Unauthorized.', 403, next);
+		}
+		if (userConCopy.thread.length === 0) {
+			return genericError('There are no messages to clear.', 409, next);
 		}
 		// Remove all references to messages from user's conversation copy.
 		userConCopy.thread = [];
@@ -344,7 +349,7 @@ exports.deleteAllExceptStarred = async (req, res, next) => {
 		// Remove references to all messages with isSterred: false.
 		const updatedThread = conversation.thread.filter(msg => msg.isStarred);
 		conversation.thread = updatedThread;
-		const updatedCon = await conversation.save();
+		await conversation.save();
 		// Delete all messages belonging to this conversation, but only if isStarred: false.
 		await Message.deleteMany({
 			belongsToConversationId: conversationId,
@@ -352,7 +357,7 @@ exports.deleteAllExceptStarred = async (req, res, next) => {
 		});
 		res.status(200).json({
 			message: 'All unstarred messages deleted.',
-			thread: updatedCon.thread
+			data: updatedThread
 		});
 	} catch (err) {
 		catchBlockError(err, next);
@@ -392,7 +397,12 @@ exports.deleteConversation = async (req, res, next) => {
 		});
 		// Delete all messages that belong to conversation.
 		await Message.deleteMany({ belongsToConversationId: conversationId });
-		res.status(200).json({ message: 'Conversation successfully deleted.' });
+		res
+			.status(200)
+			.json({
+				message: 'Conversation successfully deleted.',
+				data: updatedConArr
+			});
 	} catch (err) {
 		catchBlockError(err, next);
 	}

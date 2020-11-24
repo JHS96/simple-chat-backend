@@ -118,7 +118,12 @@ exports.login = async (req, res, next) => {
 		);
 		// If user exists and password is correct, send back userId and auth token
 		res.status(200).json({
-			userId: user._id.toString(),
+			data: {
+				userId: user._id.toString(),
+				userName: user.name,
+				email: user.email,
+				avatarUrl: user.avatarUrl
+			},
 			token: token
 		});
 	} catch (err) {

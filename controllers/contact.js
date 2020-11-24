@@ -29,7 +29,7 @@ exports.requestContact = async (req, res, next) => {
 	const requestReceiverId = req.body.requestReceiverId;
 	try {
 		const reqSender = await User.findById(requestSenderId).populate(
-			'conversations'
+			'conversations sentRequests'
 		);
 		if (!reqSender) {
 			return genericError('User not found.', 404, next);
@@ -86,8 +86,17 @@ exports.requestContact = async (req, res, next) => {
 		await reqReceiver.save();
 		// Add contact request receiver to sender's sentRequests array
 		reqSender.sentRequests.push(reqReceiver);
+		// Retrieve data from user's sentRequests array.
+		let data = [];
+		for (const item of reqSender.sentRequests) {
+			data.push({
+				name: item.name,
+				id: item._id.toString(),
+				avatarUrl: item.avatarUrl
+			});
+		}
 		await reqSender.save();
-		res.status(201).json({ message: 'Contact request sent.' });
+		res.status(201).json({ message: 'Contact request sent.', data: data });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -98,13 +107,13 @@ exports.deleteSentRequest = async (req, res, next) => {
 	const requestReceiverId = req.body.requestReceiverId;
 	try {
 		// Find user in database.
-		const user = await User.findById(userId);
+		const user = await User.findById(userId).populate('sentRequests');
 		if (!user) {
 			return genericError('User not found.', 404, next);
 		}
 		// Find sent request in user's sentRequests array and remove it.
 		const updatedSentRequests = user.sentRequests.filter(
-			r => r.toString() !== requestReceiverId
+			r => r._id.toString() !== requestReceiverId
 		);
 		user.sentRequests = updatedSentRequests;
 		await user.save();
@@ -119,11 +128,20 @@ exports.deleteSentRequest = async (req, res, next) => {
 		}
 		// Find request in receiver's receivedRequests array and remove it.
 		const updatedReceivedRequests = requestReceiver.receivedRequests.filter(
-			r => r.toString() !== userId
+			r => r._id.toString() !== userId
 		);
 		requestReceiver.receivedRequests = updatedReceivedRequests;
 		await requestReceiver.save();
-		res.status(200).json({ message: 'Request deleted.' });
+		// Retrieve data from user's sentRequests array.
+		let data = [];
+		for (const item of updatedSentRequests) {
+			data.push({
+				name: item.name,
+				id: item._id.toString(),
+				avatarUrl: item.avatarUrl
+			});
+		}
+		res.status(200).json({ message: 'Request deleted.', data: data });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -144,7 +162,16 @@ exports.deleteReceivedRequest = async (req, res, next) => {
 		);
 		user.receivedRequests = updatedReceivedRequests;
 		await user.save();
-		res.status(200).json({ message: 'Request deleted.' });
+		// Retrieve data from user's receivedRequests array.
+		let data = [];
+		for (const item of updatedReceivedRequests) {
+			data.push({
+				name: item.name,
+				id: item._id.toString(),
+				avatarUrl: item.avatarUrl
+			});
+		}
+		res.status(200).json({ message: 'Request deleted.', data: data });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -211,7 +238,9 @@ exports.addNewContact = async (req, res, next) => {
 		// Re-save user's conversation copy, this time referencing sender's (newly created) conversation copy
 		userConCopy.contactsConversationId = senConCopy._id.toString();
 		await userConCopy.save();
-		res.status(201).json({ message: 'Contact added.' });
+		res
+			.status(201)
+			.json({ message: 'Contact added.', data: updatedReceivedRequests });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -225,12 +254,13 @@ exports.getSentRequests = async (req, res, next) => {
 		if (!user) {
 			return genericError('User not found.', 404, next);
 		}
+		// Retieve data from user's sentRequests array.
 		const data = [];
 		user.sentRequests.forEach(sentReq => {
 			data.push({
 				id: sentReq._id.toString(),
 				name: sentReq.name,
-				email: sentReq.email
+				avatarUrl: sentReq.avatarUrl
 			});
 		});
 		res.status(200).json({ data: data });
@@ -252,7 +282,7 @@ exports.getReceivedRequests = async (req, res, next) => {
 			data.push({
 				id: recReq._id.toString(),
 				name: recReq.name,
-				email: recReq.email
+				avatarUrl: recReq.avatarUrl
 			});
 		});
 		res.status(200).json({ data: data });
@@ -266,21 +296,21 @@ exports.addToBlockedList = async (req, res, next) => {
 	const userToBlockId = req.body.userToBlockId;
 	try {
 		// Find user in database.
-		const user = await User.findById(userId);
+		const user = await User.findById(userId).populate('blockedList');
 		if (!user) {
 			return genericError('User not found.', 404, next);
 		}
 		// Find user to be blocked.
 		const userToBlock = await User.findById(userToBlockId);
 		if (!userToBlock) {
-			genericError('User to be blocked could not be found.');
+			genericError('User to be blocked could not be found.', 404, next);
 		}
 		// If user to be blocked is already in blocked list don't add again.
 		const userToBlockIndex = user.blockedList.findIndex(
 			item => item._id.toString() === userToBlockId
 		);
 		if (userToBlockIndex >= 0) {
-			return genericError('User already blocked.');
+			return genericError('User already blocked.', 409, next);
 		}
 		// Add userToBlock to blocked list.
 		user.blockedList.push(userToBlock);
@@ -297,9 +327,18 @@ exports.addToBlockedList = async (req, res, next) => {
 		// Add user to the blockedBy list of the user that got blocked.
 		userToBlock.blockedBy.push(user);
 		await userToBlock.save();
+		// Retieve data from user's blockedList array.
+		const data = [];
+		user.blockedList.forEach(item => {
+			data.push({
+				id: item._id.toString(),
+				name: item.name,
+				avatarUrl: item.avatarUrl
+			});
+		});
 		res
 			.status(200)
-			.json({ message: 'The user has been successfully blocked.' });
+			.json({ message: 'The user has been successfully blocked.', data: data });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -310,7 +349,7 @@ exports.removeFromBlockedList = async (req, res, next) => {
 	const userToUnblockId = req.body.userToUnblockId;
 	try {
 		// Find user in database.
-		const user = await User.findById(userId);
+		const user = await User.findById(userId).populate('blockedList');
 		if (!user) {
 			return genericError('User not found.', 404, next);
 		}
@@ -337,7 +376,16 @@ exports.removeFromBlockedList = async (req, res, next) => {
 		);
 		userToUnblock.blockedBy = updatedBlockedBy;
 		await userToUnblock.save();
-		res.status(200).json({ message: 'Successfully unblocked.' });
+		// Retieve data from user's blockedList array.
+		const data = [];
+		user.blockedList.forEach(item => {
+			data.push({
+				id: item._id.toString(),
+				name: item.name,
+				avatarUrl: item.avatarUrl
+			});
+		});
+		res.status(200).json({ message: 'Successfully unblocked.', data: data });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
