@@ -88,13 +88,13 @@ exports.requestContact = async (req, res, next) => {
 		reqSender.sentRequests.push(reqReceiver);
 		// Retrieve data from user's sentRequests array.
 		let data = [];
-		for (const item of reqSender.sentRequests) {
+		reqSender.sentRequests.forEach(item => {
 			data.push({
 				name: item.name,
 				id: item._id.toString(),
 				avatarUrl: item.avatarUrl
 			});
-		}
+		});
 		await reqSender.save();
 		res.status(201).json({ message: 'Contact request sent.', data: data });
 	} catch (err) {
@@ -134,13 +134,13 @@ exports.deleteSentRequest = async (req, res, next) => {
 		await requestReceiver.save();
 		// Retrieve data from user's sentRequests array.
 		let data = [];
-		for (const item of updatedSentRequests) {
+		updatedSentRequests.forEach(item => {
 			data.push({
 				name: item.name,
 				id: item._id.toString(),
 				avatarUrl: item.avatarUrl
 			});
-		}
+		});
 		res.status(200).json({ message: 'Request deleted.', data: data });
 	} catch (err) {
 		catchBlockError(err, next);
@@ -164,13 +164,13 @@ exports.deleteReceivedRequest = async (req, res, next) => {
 		await user.save();
 		// Retrieve data from user's receivedRequests array.
 		let data = [];
-		for (const item of updatedReceivedRequests) {
+		updatedReceivedRequests.forEach(item => {
 			data.push({
 				name: item.name,
 				id: item._id.toString(),
 				avatarUrl: item.avatarUrl
 			});
-		}
+		});
 		res.status(200).json({ message: 'Request deleted.', data: data });
 	} catch (err) {
 		catchBlockError(err, next);
@@ -401,13 +401,13 @@ exports.getBlockedList = async (req, res, next) => {
 		}
 		// Retrieve data from blockedList.
 		let data = [];
-		for (const item of user.blockedList) {
+		user.blockedList.forEach(item => {
 			data.push({
 				name: item.name,
 				id: item._id.toString(),
 				avatarUrl: item.avatarUrl
 			});
-		}
+		});
 		// Send response with data on users in blockedList.
 		res.status(200).json({ data: data });
 	} catch (err) {
