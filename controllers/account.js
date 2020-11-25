@@ -1,7 +1,12 @@
+require('dotenv').config();
 const { generate } = require('randomstring');
 const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose');
+const AWS = require('aws-sdk');
 
 const User = require('../models/user');
+const Conversation = require('../models/conversation');
+const Message = require('../models/message');
 const {
 	sendConfirmationEmail,
 	sendPasswordResetLink
@@ -133,6 +138,52 @@ exports.updatePassword = async (req, res, next) => {
 			message:
 				'Password updated. You may now log in to your account with your new password.'
 		});
+	} catch (err) {
+		catchBlockError(err, next);
+	}
+};
+
+exports.deleteAccount = async (req, res, next) => {
+	const userId = req.userId;
+	try {
+		// Find user's account.
+		const user = await User.findById(userId);
+		if (!user) {
+			return genericError('User not found.', 404, next);
+		}
+		// Delete all conversations where conversationOwner === userId.
+		await Conversation.deleteMany({
+			conversationOwner: new mongoose.Types.ObjectId(userId)
+		});
+		// Delete all messages where msgCopyOwner === userId.
+		await Message.deleteMany({ msgCopyOwner: userId });
+		// Delete user's avatar image.
+		const awsConfig = () => {
+			return AWS.config.update({
+				accessKeyId: process.env.AWS_IAM_USER_KEY,
+				secretAccessKey: process.env.AWS_IAM_USER_SECRET,
+				region: process.env.AWS_REGION
+			});
+		};
+		if (user.avatarUrl !== process.env.AWS_DEFAULT_AVATAR_URL) {
+			awsConfig();
+			const s3 = new AWS.S3();
+			// Paramaters required for deleteion.
+			const splitPath = user.avatarUrl.split('.com/');
+			const params = {
+				Bucket: process.env.AWS_BUCKET_NAME,
+				Key: decodeURIComponent(splitPath[1])
+			};
+			s3.deleteObject(params, async (err, data) => {
+				if (err) console.log(err);
+				else {
+					console.log('Image deleted.');
+				}
+			});
+		}
+		// Delete user.
+		await User.deleteOne({ _id: new mongoose.Types.ObjectId(userId) });
+		res.status(200).json({ message: 'Account deleted.' });
 	} catch (err) {
 		catchBlockError(err, next);
 	}

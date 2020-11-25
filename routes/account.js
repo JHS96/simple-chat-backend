@@ -1,6 +1,7 @@
 const express = require('express');
 
 const accountController = require('../controllers/account');
+const isAuth = require('../middleware/is-auth');
 
 const router = express.Router();
 
@@ -17,5 +18,7 @@ router.post(
 router.post('/request-reset-password', accountController.requestResetPassword);
 
 router.post('/update-password', accountController.updatePassword);
+
+router.delete('/delete-account', isAuth, accountController.deleteAccount);
 
 module.exports = router;
