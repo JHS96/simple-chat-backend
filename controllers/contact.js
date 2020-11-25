@@ -28,6 +28,13 @@ exports.requestContact = async (req, res, next) => {
 	const requestSenderId = req.userId;
 	const requestReceiverId = req.body.requestReceiverId;
 	try {
+		if (requestSenderId === requestReceiverId) {
+			return genericError(
+				"You can't send a contact request to yourself.",
+				409,
+				next
+			);
+		}
 		const reqSender = await User.findById(requestSenderId).populate(
 			'conversations sentRequests'
 		);

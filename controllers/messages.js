@@ -369,7 +369,7 @@ exports.deleteConversation = async (req, res, next) => {
 	const conversationId = req.body.conversationId;
 	try {
 		// Remove reference to conversation from user's conversations array.
-		const user = await User.findById(userId);
+		const user = await User.findById(userId).populate('conversations');
 		if (!user) {
 			return genericError('User not found.', 404, next);
 		}
@@ -397,12 +397,10 @@ exports.deleteConversation = async (req, res, next) => {
 		});
 		// Delete all messages that belong to conversation.
 		await Message.deleteMany({ belongsToConversationId: conversationId });
-		res
-			.status(200)
-			.json({
-				message: 'Conversation successfully deleted.',
-				data: updatedConArr
-			});
+		res.status(200).json({
+			message: 'Conversation successfully deleted.',
+			data: updatedConArr
+		});
 	} catch (err) {
 		catchBlockError(err, next);
 	}
