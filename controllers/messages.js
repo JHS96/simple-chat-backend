@@ -111,7 +111,9 @@ exports.sendMessage = async (req, res, next) => {
 		// Add user's copy of message to thread array of user's(sender's) conversation copy.
 		senderCon.thread.push(sendResult);
 		const updatedCon = await senderCon.save();
-		res.status(201).json({ message: 'Message sent.', data: updatedCon });
+		res
+			.status(201)
+			.json({ message: 'Message sent.', updatedConversation: updatedCon });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -149,7 +151,7 @@ exports.getAllConversations = async (req, res, next) => {
 		if (!user) {
 			return genericError('User not found.', 404, next);
 		}
-		res.status(200).json({ data: user.conversations });
+		res.status(200).json({ conversations: user.conversations });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -175,7 +177,7 @@ exports.getConversation = async (req, res, next) => {
 		}
 		res
 			.status(200)
-			.json({ message: 'Conversation found.', data: conversation });
+			.json({ message: 'Conversation found.', conversation: conversation });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -218,7 +220,9 @@ exports.deleteMessage = async (req, res, next) => {
 		);
 		conversation.thread = updatedThread;
 		await conversation.save();
-		res.status(200).json({ message: 'Message deleted.', data: updatedThread });
+		res
+			.status(200)
+			.json({ message: 'Message deleted.', updatedThread: updatedThread });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -297,9 +301,10 @@ exports.deleteMessageForBoth = async (req, res, next) => {
 		}
 		// Delete user's copy of message.
 		await Message.deleteOne({ _id: new mongoose.Types.ObjectId(messageId) });
-		res
-			.status(200)
-			.json({ message: 'Message deleted.', data: updatedUserConThread });
+		res.status(200).json({
+			message: 'Message deleted.',
+			updatedThread: updatedUserConThread
+		});
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -357,7 +362,7 @@ exports.deleteAllExceptStarred = async (req, res, next) => {
 		});
 		res.status(200).json({
 			message: 'All unstarred messages deleted.',
-			data: updatedThread
+			updatedThread: updatedThread
 		});
 	} catch (err) {
 		catchBlockError(err, next);
@@ -399,7 +404,7 @@ exports.deleteConversation = async (req, res, next) => {
 		await Message.deleteMany({ belongsToConversationId: conversationId });
 		res.status(200).json({
 			message: 'Conversation successfully deleted.',
-			data: updatedConArr
+			updatedConversations: updatedConArr
 		});
 	} catch (err) {
 		catchBlockError(err, next);

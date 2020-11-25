@@ -18,7 +18,7 @@ exports.searchUsers = async (req, res, next) => {
 				data.push({ name: rslt.name, id: rslt._id });
 			}
 		});
-		res.status(200).json({ data: data });
+		res.status(200).json({ searchResult: data });
 	} catch (err) {
 		catchBlockError(err, naxt);
 	}
@@ -103,7 +103,9 @@ exports.requestContact = async (req, res, next) => {
 			});
 		});
 		await reqSender.save();
-		res.status(201).json({ message: 'Contact request sent.', data: data });
+		res
+			.status(201)
+			.json({ message: 'Contact request sent.', updatedSentRequests: data });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -148,7 +150,9 @@ exports.deleteSentRequest = async (req, res, next) => {
 				avatarUrl: item.avatarUrl
 			});
 		});
-		res.status(200).json({ message: 'Request deleted.', data: data });
+		res
+			.status(200)
+			.json({ message: 'Request deleted.', updatedSentRequests: data });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -178,7 +182,9 @@ exports.deleteReceivedRequest = async (req, res, next) => {
 				avatarUrl: item.avatarUrl
 			});
 		});
-		res.status(200).json({ message: 'Request deleted.', data: data });
+		res
+			.status(200)
+			.json({ message: 'Request deleted.', updatedReceivedRequests: data });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -245,9 +251,10 @@ exports.addNewContact = async (req, res, next) => {
 		// Re-save user's conversation copy, this time referencing sender's (newly created) conversation copy
 		userConCopy.contactsConversationId = senConCopy._id.toString();
 		await userConCopy.save();
-		res
-			.status(201)
-			.json({ message: 'Contact added.', data: updatedReceivedRequests });
+		res.status(201).json({
+			message: 'Contact added.',
+			updatedReceivedRequests: updatedReceivedRequests
+		});
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -270,7 +277,7 @@ exports.getSentRequests = async (req, res, next) => {
 				avatarUrl: sentReq.avatarUrl
 			});
 		});
-		res.status(200).json({ data: data });
+		res.status(200).json({ sentRequests: data });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -292,7 +299,7 @@ exports.getReceivedRequests = async (req, res, next) => {
 				avatarUrl: recReq.avatarUrl
 			});
 		});
-		res.status(200).json({ data: data });
+		res.status(200).json({ receivedRequests: data });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -343,9 +350,10 @@ exports.addToBlockedList = async (req, res, next) => {
 				avatarUrl: item.avatarUrl
 			});
 		});
-		res
-			.status(200)
-			.json({ message: 'The user has been successfully blocked.', data: data });
+		res.status(200).json({
+			message: 'The user has been successfully blocked.',
+			updatedBlockedList: data
+		});
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -392,7 +400,9 @@ exports.removeFromBlockedList = async (req, res, next) => {
 				avatarUrl: item.avatarUrl
 			});
 		});
-		res.status(200).json({ message: 'Successfully unblocked.', data: data });
+		res
+			.status(200)
+			.json({ message: 'Successfully unblocked.', updatedBlockedList: data });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -416,7 +426,7 @@ exports.getBlockedList = async (req, res, next) => {
 			});
 		});
 		// Send response with data on users in blockedList.
-		res.status(200).json({ data: data });
+		res.status(200).json({ blockedList: data });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
