@@ -43,4 +43,10 @@ router.delete(
 	messagesController.deleteConversation
 );
 
+router.get(
+	'/download-conversation/:conversationId',
+	isAuth,
+	messagesController.downloadConversation
+);
+
 module.exports = router;

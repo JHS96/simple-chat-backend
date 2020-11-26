@@ -1,9 +1,13 @@
+const path = require('path');
+const fs = require('fs');
 const mongoose = require('mongoose');
+const PDFDocument = require('pdfkit');
 
 const User = require('../models/user');
 const Conversation = require('../models/conversation');
 const Message = require('../models/message');
 const { genericError, catchBlockError } = require('../util/errorHandlers');
+const { clearDir } = require('../util/clearDirectory');
 
 exports.sendMessage = async (req, res, next) => {
 	const userId = req.userId;
@@ -95,7 +99,7 @@ exports.sendMessage = async (req, res, next) => {
 		await receiverCon.save();
 		// Create message copy for sender
 		const senderMsgCopy = new Message({
-			senderName: 'Me: ' + sender.name,
+			senderName: 'Me',
 			senderId: userId,
 			senderConversationId: senderConversationId,
 			receiverConversationId: receiverConversationId,
@@ -406,6 +410,65 @@ exports.deleteConversation = async (req, res, next) => {
 			message: 'Conversation successfully deleted.',
 			updatedConversations: updatedConArr
 		});
+	} catch (err) {
+		catchBlockError(err, next);
+	}
+};
+
+exports.downloadConversation = async (req, res, next) => {
+	// const userId = req.userId;
+	const userId = req.userId;
+	const conversationId = req.params.conversationId;
+	try {
+		// Find conversation.
+		const conversation = await Conversation.findById(conversationId).populate(
+			'thread'
+		);
+		if (!conversation) {
+			return genericError('Conversation not found.', 404, next);
+		}
+		// If userId !== conversationOwner, disallow download.
+		if (userId !== conversation.conversationOwner.toString()) {
+			return genericError(
+				'You are not authorized to download this conversation.',
+				403,
+				next
+			);
+		}
+		// Create and send conversation as .pdf file.
+		const filename = 'Conversation-' + conversationId + '.pdf';
+		const filePath = path.join('data', 'pdfs', filename);
+		const pdfDoc = new PDFDocument();
+		res.setHeader('Content-Type', 'application/pdf');
+		res.setHeader(
+			'Content-Disposition',
+			'attachment; filename="' + filename + '"'
+		);
+		pdfDoc.pipe(fs.createWriteStream(filePath));
+		pdfDoc.pipe(res);
+		pdfDoc.fontSize(22).text('Conversation with ' + conversation.contactName, {
+			underline: true,
+			align: 'center'
+		});
+		pdfDoc.moveDown();
+		for (const msg of conversation.thread) {
+			pdfDoc
+				.fontSize(6)
+				.fillColor('lightgrey')
+				.text(new Date(msg.createdAt).toLocaleString());
+			pdfDoc
+				.fontSize(10)
+				.fillColor('black')
+				.text(msg.senderName + ':', { underline: true, continued: true })
+				.stroke()
+				.fontSize(12)
+				.fillColor('grey')
+				.text(' ' + msg.message, { underline: false });
+			pdfDoc.moveDown();
+		}
+		pdfDoc.end();
+		// Clear out data/pdfs folder. (File will NOT be stored on server.)
+		clearDir('data/pdfs');
 	} catch (err) {
 		catchBlockError(err, next);
 	}
