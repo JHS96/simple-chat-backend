@@ -3,6 +3,7 @@ const { generate } = require('randomstring');
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const AWS = require('aws-sdk');
+const { validationResult } = require('express-validator');
 
 const User = require('../models/user');
 const Conversation = require('../models/conversation');
@@ -48,6 +49,10 @@ exports.confirmEmailAddress = async (req, res, next) => {
 };
 
 exports.resendConfirmationEmail = async (req, res, next) => {
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		return genericError(errors.array()[0].msg, 422, next);
+	}
 	const email = req.body.email;
 	try {
 		// Find user's inactive account.
@@ -76,6 +81,10 @@ exports.resendConfirmationEmail = async (req, res, next) => {
 };
 
 exports.requestResetPassword = async (req, res, next) => {
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		return genericError(errors.array()[0].msg, 422, next);
+	}
 	const email = req.body.email;
 	try {
 		// Find user with matching email address.
@@ -109,6 +118,10 @@ exports.requestResetPassword = async (req, res, next) => {
 };
 
 exports.updatePassword = async (req, res, next) => {
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		return genericError(errors.array()[0].msg, 422, next);
+	}
 	const userId = req.body.userId;
 	const passwordResetToken = req.body.passwordResetToken;
 	const newPassword = req.body.newPassword;

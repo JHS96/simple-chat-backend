@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+const { check } = require('express-validator');
 
 const authController = require('../controllers/auth');
 
@@ -21,9 +22,36 @@ router.route('/signup').post(
 			}
 		}
 	}).single('avatar'),
+	[
+		check('name', 'Name should be between 3 and 15 characters long.')
+			.trim()
+			.isLength({
+				min: 3,
+				max: 15
+			}),
+		check('email', 'Please enter a valid email address.').trim().isEmail(),
+		check(
+			'password',
+			'Password should be at least 6 characters and no more than 32 characters long.'
+		)
+			.trim()
+			.isLength({ min: 6, max: 32 })
+	],
 	authController.signup
 );
 
-router.post('/login', authController.login);
+router.post(
+	'/login',
+	[
+		check('email', 'Please enter a valid email address.').trim().isEmail(),
+		check(
+			'password',
+			'Password should be at least 6 characters and no more than 32 characters long.'
+		)
+			.trim()
+			.isLength({ min: 6, max: 32 })
+	],
+	authController.login
+);
 
 module.exports = router;

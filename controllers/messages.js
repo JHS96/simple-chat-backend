@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
 const PDFDocument = require('pdfkit');
+const { validationResult } = require('express-validator');
 
 const User = require('../models/user');
 const Conversation = require('../models/conversation');
@@ -10,6 +11,10 @@ const { genericError, catchBlockError } = require('../util/errorHandlers');
 const { clearDir } = require('../util/clearDirectory');
 
 exports.sendMessage = async (req, res, next) => {
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		return genericError(errors.array()[0].msg, 422, next);
+	}
 	const userId = req.userId;
 	const msgReceiverId = req.body.msgReceiverId;
 	const senderConversationId = req.body.senderConversationId;

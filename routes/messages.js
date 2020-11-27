@@ -1,4 +1,5 @@
 const express = require('express');
+const { check } = require('express-validator');
 
 const messagesController = require('../controllers/messages');
 const isAuth = require('../middleware/is-auth');
@@ -17,7 +18,14 @@ router.get(
 	messagesController.getConversation
 );
 
-router.post('/send-message', isAuth, messagesController.sendMessage);
+router.post(
+	'/send-message',
+	check('msgBody', 'Message needs to be at least 1 character long.')
+		.trim()
+		.isLength({ min: 1 }),
+	isAuth,
+	messagesController.sendMessage
+);
 
 router.post('/toggle-star', isAuth, messagesController.toggleIsStarred);
 

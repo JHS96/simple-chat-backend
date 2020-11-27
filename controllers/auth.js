@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const AWS = require('aws-sdk');
 const fs = require('fs');
 const { generate } = require('randomstring');
+const { validationResult } = require('express-validator');
 
 const User = require('../models/user');
 const { clearDir } = require('../util/clearDirectory');
@@ -11,6 +12,10 @@ const { sendConfirmationEmail } = require('../util/sendEmail');
 const { genericError, catchBlockError } = require('../util/errorHandlers');
 
 exports.signup = async (req, res, next) => {
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		return genericError(errors.array()[0].msg, 422, next);
+	}
 	const name = req.body.name;
 	const email = req.body.email;
 	const password = req.body.password;
@@ -89,6 +94,10 @@ exports.signup = async (req, res, next) => {
 };
 
 exports.login = async (req, res, next) => {
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		return genericError(errors.array()[0].msg, 422, next);
+	}
 	const email = req.body.email;
 	const password = req.body.password;
 	// If no user for this email could be found, throw error.

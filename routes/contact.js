@@ -1,11 +1,22 @@
 const express = require('express');
+const { check } = require('express-validator');
 
 const contactController = require('../controllers/contact');
 const isAuth = require('../middleware/is-auth');
 
 const router = express.Router();
 
-router.post('/search-users', isAuth, contactController.searchUsers);
+router.post(
+	'/search-users',
+	isAuth,
+	check(
+		'searchTerm',
+		'Your search term should be at least 2 characters and no more than 15 characters long.'
+	)
+		.trim()
+		.isLength({ min: 2, max: 15 }),
+	contactController.searchUsers
+);
 
 router.get('/sent-requests', isAuth, contactController.getSentRequests);
 

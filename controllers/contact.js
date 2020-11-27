@@ -1,8 +1,14 @@
+const { validationResult } = require('express-validator');
+
 const User = require('../models/user');
 const Conversation = require('../models/conversation');
 const { genericError, catchBlockError } = require('../util/errorHandlers');
 
 exports.searchUsers = async (req, res, next) => {
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		return genericError(errors.array()[0].msg, 422, next);
+	}
 	const searchTerm = req.body.searchTerm;
 	try {
 		// Look for searchTerm matches using a regular expression
@@ -15,7 +21,11 @@ exports.searchUsers = async (req, res, next) => {
 		const data = [];
 		result.forEach(rslt => {
 			if (rslt._id.toString() !== req.userId) {
-				data.push({ name: rslt.name, id: rslt._id });
+				data.push({
+					name: rslt.name,
+					id: rslt._id,
+					avatarUrl: rslt.avatarUrl
+				});
 			}
 		});
 		res.status(200).json({ searchResult: data });
