@@ -133,7 +133,8 @@ exports.login = async (req, res, next) => {
 				email: user.email,
 				avatarUrl: user.avatarUrl
 			},
-			token: token
+			token: token,
+			jwtExpireTime: Date.now() + 1000 * 60 * 12
 		});
 	} catch (err) {
 		catchBlockError(err, next);
