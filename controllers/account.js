@@ -74,7 +74,7 @@ exports.resendConfirmationEmail = async (req, res, next) => {
 		const result = await user.save();
 		// Send new activation/confirmation email.
 		sendConfirmationEmail(result);
-		res.status(200).json({ message: 'Email sent. Please check your inbox' });
+		res.status(200).json({ message: 'Email sent. Please check your inbox (or junk/spam folder)' });
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -110,7 +110,7 @@ exports.requestResetPassword = async (req, res, next) => {
 		// Send email with reset link to user's email address.
 		sendPasswordResetLink(result);
 		res.status(200).json({
-			message: `Password reset instructions sent to ${email}. Please check your inbox.`
+			message: `Password reset instructions sent to ${email}. Please check your inbox (or junk/spam folder).`
 		});
 	} catch (err) {
 		catchBlockError(err, next);

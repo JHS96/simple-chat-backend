@@ -25,7 +25,7 @@ exports.signup = async (req, res, next) => {
 		const result = await user.save();
 		sendConfirmationEmail(result);
 		res.status(201).json({
-			message: `An email has been sent to: ${user.email}. Please check your inbox and click on the verification link in order to confirm your email address and activate your account. Please allow a few minutes for the email to arrive.`
+			message: `An email has been sent to: ${user.email}. Please check your inbox (or junk/spam folder), and click on the verification link in order to confirm your email address and activate your account. Please allow a few minutes for the email to arrive.`
 		});
 	};
 
