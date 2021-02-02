@@ -5,7 +5,7 @@ const send = msg => {
 	sgMail
 		.send(msg)
 		.then(() => {
-			console.log('Message sent.');
+			console.log('Email sent.');
 		})
 		.catch(error => {
 			console.log(error);
@@ -27,6 +27,8 @@ exports.sendConfirmationEmail = user => {
 			user.activationToken
 		}</a>
 				<p>For security reasons the above confirmation link will expire in 1 hour.</p>
+				<p>You can safely ignore this email if it was sent to you in error.</p>
+				<p>Simple Chat</p>
 			`
 	};
 	send(msg);
