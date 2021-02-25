@@ -209,10 +209,10 @@ exports.addNewContact = async (req, res, next) => {
 		if (!user) {
 			return genericError('User not found.', 404, next);
 		}
-		// If request sender could not be found, throw error.
 		const requestSender = await User.findById(requestSenderId).populate(
 			'conversations'
 		);
+		// If request sender could not be found, throw error.
 		if (!requestSender) {
 			return genericError('New contact details could not be found.', 404, next);
 		}
@@ -237,7 +237,8 @@ exports.addNewContact = async (req, res, next) => {
 			contactName: requestSender.name,
 			contactId: requestSenderId,
 			contactsConversationId: "<Reference to sender's copy of conversation>",
-			thread: []
+			thread: [],
+			contactAvatarUrl: requestSender.avatarUrl
 		});
 		const userConCopy = await usersConversationCopy.save();
 		user.conversations.push(userConCopy);

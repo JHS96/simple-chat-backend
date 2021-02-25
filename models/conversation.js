@@ -16,6 +16,10 @@ const conversationSchema = new Schema(
 			type: String,
 			required: true
 		},
+		contactAvatarUrl: {
+			type: String,
+			required: true
+		},
 		contactsConversationId: {
 			type: String,
 			required: true
