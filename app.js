@@ -9,6 +9,10 @@ const contactRoutes = require('./routes/contact');
 const messageRoutes = require('./routes/messages');
 const avatarRoutes = require('./routes/avatar');
 const accountRoutes = require('./routes/account');
+const {
+	addClientToMap,
+	removeClientFromMap
+} = require('./util/socketHandlers');
 
 require('dotenv').config();
 
@@ -54,6 +58,20 @@ mongoose
 		useFindAndModify: false
 	})
 	.then(result => {
-		app.listen(PORT, () => console.log(`Server listening on port: ${PORT}`));
+		const server = app.listen(PORT, () =>
+			console.log(`Server listening on port: ${PORT}`)
+		);
+		const io = require('./socket').init(server);
+		let chatId;
+		io.on('connection', socket => {
+			// Add client to conversationSocketIdMap (in ./util/socketHandlers)
+			if (socket.handshake.query.chatId) {
+				chatId = socket.handshake.query.chatId;
+				addClientToMap(chatId, socket.id);
+			}
+			socket.on('disconnect', () => {
+				removeClientFromMap(chatId);
+			});
+		});
 	})
 	.catch(err => console.log(err));

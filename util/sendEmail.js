@@ -41,7 +41,7 @@ exports.sendPasswordResetLink = user => {
 		subject: 'Password Reset',
 		text: 'Password Reset',
 		html: `
-				<p>We have received a request to reset your password. If you did not request a password reset, of if you requested the reset by mistake, you may safely ignore this email, and your password will remain as it was before.</p>
+				<p>We have received a request to reset your password. If you did not request a password reset, or if you requested the reset by mistake, you may safely ignore this email, and your password will remain as it was before.</p>
 				<p>If you did request the password reset, please click the link below.</p>
 				<a href="${
 					process.env.FRONTEND_DOMAIN

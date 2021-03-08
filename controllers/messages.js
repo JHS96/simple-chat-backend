@@ -9,6 +9,7 @@ const Conversation = require('../models/conversation');
 const Message = require('../models/message');
 const { genericError, catchBlockError } = require('../util/errorHandlers');
 const { clearDir } = require('../util/clearDirectory');
+const io = require('../socket');
 
 exports.sendMessage = async (req, res, next) => {
 	const errors = validationResult(req);
@@ -104,7 +105,7 @@ exports.sendMessage = async (req, res, next) => {
 		await receiverCon.save();
 		// Create message copy for sender
 		const senderMsgCopy = new Message({
-			senderName: 'Me',
+			senderName: sender.name || 'Me',
 			senderId: userId,
 			senderConversationId: senderConversationId,
 			receiverConversationId: receiverConversationId,
@@ -119,6 +120,10 @@ exports.sendMessage = async (req, res, next) => {
 		await receiveResult.save();
 		// Add user's copy of message to thread array of user's(sender's) conversation copy.
 		senderCon.thread.push(sendResult);
+
+		// Emit message to client where this particular conversation is connected.
+		io.getIO().emit('new-message', { message: senderMsgCopy });
+
 		const updatedCon = await senderCon.save();
 		res
 			.status(201)
