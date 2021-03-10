@@ -122,12 +122,16 @@ exports.sendMessage = async (req, res, next) => {
 		senderCon.thread.push(sendResult);
 
 		// Emit message to client where this particular conversation is connected.
-		io.getIO().emit('new-message', { message: senderMsgCopy });
+		io.getIO().emit('new-message', { message: receiverMsgCopy });
 
 		const updatedCon = await senderCon.save();
 		res
 			.status(201)
-			.json({ message: 'Message sent.', updatedConversation: updatedCon });
+			.json({
+				message: 'Message sent.',
+				updatedConversation: updatedCon,
+				senderMsgCopy: senderMsgCopy
+			});
 	} catch (err) {
 		catchBlockError(err, next);
 	}
