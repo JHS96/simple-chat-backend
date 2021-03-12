@@ -125,13 +125,11 @@ exports.sendMessage = async (req, res, next) => {
 		io.getIO().emit('new-message', { message: receiverMsgCopy });
 
 		const updatedCon = await senderCon.save();
-		res
-			.status(201)
-			.json({
-				message: 'Message sent.',
-				updatedConversation: updatedCon,
-				senderMsgCopy: senderMsgCopy
-			});
+		res.status(201).json({
+			message: 'Message sent.',
+			updatedConversation: updatedCon,
+			senderMsgCopy: senderMsgCopy
+		});
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -310,11 +308,15 @@ exports.deleteMessageForBoth = async (req, res, next) => {
 			const contactMsgCopy = await Message.findById(contactMsgCopyId);
 			if (contactMsgCopy) {
 				// Alter contact's copy of message.
-				await Message.findByIdAndUpdate(contactMsgCopyId, {
-					message: '...',
-					msgDeletedBySender: true
-				});
-				await contactMsgCopy.save();
+				const alteredMessage = await Message.findByIdAndUpdate(
+					contactMsgCopyId,
+					{
+						message: 'Message deleted by sender...',
+						msgDeletedBySender: true
+					}
+				);
+				// Emit to client where this particular conversation is connected.
+				await io.getIO().emit('alter-message', { alteredMsg: alteredMessage });
 			}
 		}
 		// Delete user's copy of message.
