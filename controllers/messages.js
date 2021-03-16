@@ -10,6 +10,9 @@ const Message = require('../models/message');
 const { genericError, catchBlockError } = require('../util/errorHandlers');
 const { clearDir } = require('../util/clearDirectory');
 const io = require('../socket');
+const { getConversationSocketIdMap } = require('../util/socketHandlers');
+
+const socketIdMap = getConversationSocketIdMap();
 
 exports.sendMessage = async (req, res, next) => {
 	const errors = validationResult(req);
@@ -122,7 +125,11 @@ exports.sendMessage = async (req, res, next) => {
 		senderCon.thread.push(sendResult);
 
 		// Emit message to client where this particular conversation is connected.
-		io.getIO().emit('new-message', { message: receiverMsgCopy });
+		const recipientSocketId = await socketIdMap.get(receiverConversationId);
+		await io
+			.getIO()
+			.to(recipientSocketId)
+			.emit('new-message', { message: receiverMsgCopy });
 
 		const updatedCon = await senderCon.save();
 		res.status(201).json({

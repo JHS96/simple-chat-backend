@@ -254,7 +254,8 @@ exports.addNewContact = async (req, res, next) => {
 			contactName: user.name,
 			contactId: userId,
 			contactsConversationId: userConCopy._id.toString(),
-			thread: []
+			thread: [],
+			contactAvatarUrl: user.avatarUrl
 		});
 		const senConCopy = await sendersConversationCopy.save();
 		requestSender.conversations.push(senConCopy);
