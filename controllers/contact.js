@@ -114,7 +114,7 @@ exports.requestContact = async (req, res, next) => {
 		});
 		await reqSender.save();
 		res
-			.status(201)
+			.status(200)
 			.json({ message: 'Contact request sent.', updatedSentRequests: data });
 	} catch (err) {
 		catchBlockError(err, next);

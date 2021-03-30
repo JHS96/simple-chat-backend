@@ -49,10 +49,8 @@ exports.sendPasswordResetLink = user => {
 			user.passwordResetToken
 		}">${
 			process.env.FRONTEND_DOMAIN
-		}/account/request-reset-password/${user._id.toString()}/${
-			user.passwordResetToken
-		}</a>
-				<p>For security reasons the above reset link will expire in 1 hour.</p>
+		}/auth/reset-password/${user._id.toString()}/${user.passwordResetToken}</a>
+					<p>For security reasons the above reset link will expire in 1 hour.</p>
 				`
 	};
 	send(msg);
