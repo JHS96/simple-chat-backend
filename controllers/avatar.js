@@ -3,6 +3,7 @@ const fs = require('fs');
 const AWS = require('aws-sdk');
 
 const User = require('../models/user');
+const Conversation = require('../models/conversation');
 const { genericError, catchBlockError } = require('../util/errorHandlers');
 
 const awsConfig = () => {
@@ -40,6 +41,10 @@ exports.deleteAvatarImg = async (req, res, next) => {
 					message: 'Avatar image successfully deleted.',
 					newAvatarUrl: result.avatarUrl
 				});
+				await Conversation.updateMany(
+					{ contactId: user._id },
+					{ contactAvatarUrl: process.env.AWS_DEFAULT_AVATAR_URL }
+				);
 			}
 		});
 	} catch (err) {
@@ -95,6 +100,10 @@ exports.updateAvatarImg = async (req, res, next) => {
 					message: 'Avatar image sucessfully updated',
 					newAvatarUrl: result.avatarUrl
 				});
+				await Conversation.updateMany(
+					{ contactId: user._id },
+					{ contactAvatarUrl: result.avatarUrl }
+				);
 			}
 		});
 	} catch (err) {
