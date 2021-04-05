@@ -23,6 +23,21 @@ router.post(
 	accountController.requestResetPassword
 );
 
+// Below route is for when the user has forgotten their password, and has requested
+// password reset to be sent to them via email.
+router.post(
+	'/reset-password',
+	check(
+		'newPassword',
+		'Password should be at least 6 characters and no more than 32 characters long.'
+	)
+		.trim()
+		.isLength({ min: 6, max: 32 }),
+	accountController.resetPassword
+);
+
+// Below route is for when the user has forgotten their password, and has requested
+// password reset to be sent to them via email.
 router.post(
 	'/update-password',
 	check(

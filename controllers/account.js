@@ -117,7 +117,9 @@ exports.requestResetPassword = async (req, res, next) => {
 	}
 };
 
-exports.updatePassword = async (req, res, next) => {
+// Below function is for when the user has forgotten their password, and has requested
+// password reset to be sent to them via email.
+exports.resetPassword = async (req, res, next) => {
 	const errors = validationResult(req);
 	if (!errors.isEmpty()) {
 		return genericError(errors.array()[0].msg, 422, next);
@@ -150,6 +152,33 @@ exports.updatePassword = async (req, res, next) => {
 		res.status(200).json({
 			message:
 				'Password updated. You may now log in to your account with your new password.'
+		});
+	} catch (err) {
+		catchBlockError(err, next);
+	}
+};
+
+exports.updatePassword = async (req, res, next) => {
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		return genericError(errors.array()[0].msg, 422, next);
+	}
+	const userId = req.body.userId;
+	const newPassword = req.body.newPassword;
+	try {
+		// Find user in database.
+		const user = await User.findById(userId);
+		if (!user) {
+			return genericError('User not found.', 404, next);
+		}
+		// Encrypt new password.
+		const hashedPassword = await bcrypt.hash(newPassword, 12);
+		// Save user back to database with new password.
+		user.password = hashedPassword;
+		await user.save();
+		res.status(200).json({
+			message:
+				'Password successfully updated.'
 		});
 	} catch (err) {
 		catchBlockError(err, next);
