@@ -74,7 +74,9 @@ exports.resendConfirmationEmail = async (req, res, next) => {
 		const result = await user.save();
 		// Send new activation/confirmation email.
 		sendConfirmationEmail(result);
-		res.status(200).json({ message: 'Email sent. Please check your inbox (or junk/spam folder)' });
+		res.status(200).json({
+			message: 'Email sent. Please check your inbox (or junk/spam folder)'
+		});
 	} catch (err) {
 		catchBlockError(err, next);
 	}
@@ -163,7 +165,7 @@ exports.updatePassword = async (req, res, next) => {
 	if (!errors.isEmpty()) {
 		return genericError(errors.array()[0].msg, 422, next);
 	}
-	const userId = req.body.userId;
+	const userId = req.userId;
 	const newPassword = req.body.newPassword;
 	try {
 		// Find user in database.
@@ -177,8 +179,37 @@ exports.updatePassword = async (req, res, next) => {
 		user.password = hashedPassword;
 		await user.save();
 		res.status(200).json({
-			message:
-				'Password successfully updated.'
+			message: 'Password successfully updated.'
+		});
+	} catch (err) {
+		catchBlockError(err, next);
+	}
+};
+
+exports.updateUserName = async (req, res, next) => {
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		return genericError(errors.array()[0].msg, 422, next);
+	}
+	const userId = req.userId;
+	const newUserName = req.body.newUserName;
+	try {
+		// Find user in database.
+		const user = await User.findById(userId);
+		if (!user) {
+			return genericError('User not found.', 404, next);
+		}
+		// Save user back to database with new username.
+		user.name = newUserName;
+		await user.save();
+		// Change contactName in all conversations where this user's id matches
+		// the conversation's contactId.
+		await Conversation.updateMany(
+			{ contactId: userId },
+			{ contactName: newUserName }
+		);
+		await res.status(200).json({
+			message: 'Username successfully updated.'
 		});
 	} catch (err) {
 		catchBlockError(err, next);

@@ -40,6 +40,7 @@ router.post(
 // password reset to be sent to them via email.
 router.post(
 	'/update-password',
+	isAuth,
 	check(
 		'newPassword',
 		'Password should be at least 6 characters and no more than 32 characters long.'
@@ -47,6 +48,18 @@ router.post(
 		.trim()
 		.isLength({ min: 6, max: 32 }),
 	accountController.updatePassword
+);
+
+router.post(
+	'/update-username',
+	isAuth,
+	check(
+		'newUserName',
+		'Username should be at least 3 character and no more than 15 characterslong.'
+	)
+		.trim()
+		.isLength({ min: 3, max: 15 }),
+	accountController.updateUserName
 );
 
 router.delete('/delete-account', isAuth, accountController.deleteAccount);
