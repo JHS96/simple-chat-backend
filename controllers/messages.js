@@ -406,7 +406,7 @@ exports.deleteConversation = async (req, res, next) => {
 			return genericError('User not found.', 404, next);
 		}
 		const updatedConArr = user.conversations.filter(
-			con => con.toString() !== conversationId
+			con => con._id.toString() !== conversationId
 		);
 		user.conversations = updatedConArr;
 		await user.save();
