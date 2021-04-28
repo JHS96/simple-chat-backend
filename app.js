@@ -1,6 +1,5 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
 
 const helmet = require('helmet');
 
@@ -20,7 +19,8 @@ const app = express();
 
 app.use(helmet());
 
-app.use(bodyParser.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 // CORS setup
 app.use((req, res, next) => {
