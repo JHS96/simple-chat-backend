@@ -1,4 +1,4 @@
-This is the backend/server-side code for my simple chat application. The repository for the frontend can be found [here](https://github.com/JHS96/simple-chat-frontend).
+This is the backend/server-side **(REST API)** code for my simple chat application. The repository for the frontend can be found [here](https://github.com/JHS96/simple-chat-frontend).
 
 A working, live version of the frontend can be found at [Simplechat.online](https://simplechat.online).
 
